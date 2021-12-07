@@ -38,15 +38,23 @@ logLik.phybreak <- function(object, genetic = TRUE, withinhost = TRUE, sampling 
                             distance = TRUE, ...) {
   res <- 0
   if (genetic) {
-    res <- res + with(object, .likseq(matrix(unlist(d$sequences), ncol = d$nsamples), 
-                                      attr(d$sequences, "weight"), 
-                                      v$nodeparents, v$nodetimes, p$mu, d$nsamples))
+    if(object$h$use.pml == FALSE){
+      res <- res + with(object, .likseq(matrix(unlist(d$sequences), ncol = d$nsamples), 
+                                        attr(d$sequences, "weight"), 
+                                        v$nodeparents, v$nodetimes, p$mu, d$nsamples))
+    } else if(object$h$use.pml == TRUE){
+      res <- res + with(object, phangorn::pml(get_phylo(object), d$sequences, rate = p$mu, 
+                                              bf = p$base.freq, Q = p$sub.rates, 
+                                              shape = p$het.shape, inv = d$inv.sites))
+    }
   }
   if (generation) {
-    res <- res + with(object, lik_gentimes(p$gen.shape, p$gen.mean, v$inftimes, v$infectors))
+    res <- res + with(object, lik_gentimes(p$gen.shape, p$gen.mean, v$inftimes, v$infectors,
+                                           p$gen.nonpar, p$gen.pdf, d$sample.times, p$gen.dens.scale, p$post.sam.trans.rate))
   }
   if (sampling) {
-    res <- res + with(object, lik_sampletimes(p$obs, p$sample.shape, p$sample.mean, v$nodetimes, v$inftimes))
+    res <- res + with(object, lik_sampletimes(p$obs, p$sample.shape, p$sample.mean, v$nodetimes, v$inftimes, 
+                                              p$sample.nonpar, p$sample.pdf))
   }
   if (withinhost) {
     objectenv <- object
@@ -69,15 +77,48 @@ logLik.phybreak <- function(object, genetic = TRUE, withinhost = TRUE, sampling 
 
 
 ### calculate the log-likelihood of generation intervals 
-lik_gentimes <- function(shapeG, meanG, inftimes, infectors) {
-  sum(dgamma(inftimes[infectors > 0] - 
-               inftimes[infectors[infectors > 0]], 
-             shape = shapeG, scale = meanG/shapeG, log = TRUE))
+lik_gentimes <- function(shapeG, meanG, inftimes, infectors, gen.nonpar, gen.pdf, sample.times, gen.dens.scale, post.sam.trans.rate) {
+  if(gen.nonpar == FALSE){
+    sum(dgamma(inftimes[infectors > 0] - 
+                 inftimes[infectors[infectors > 0]], 
+               shape = shapeG, scale = meanG/shapeG, log = TRUE))
+  } else{
+    #for individual gen densities
+    #sum(log(mapply(FUN = function(gen.pdf, inftimes, infectors){gen.pdf(inftimes[infectors > 0] - 
+    #                                                                      inftimes[infectors[infectors > 0]])}, 
+    #               gen.pdf = gen.pdf, inftimes = inftimes, infectors = infectors)))
+    #find penalties for transmission after sampling
+    rel.rate <- mapply(FUN = post.sam.trans.adjust, 
+                       t_sam = sample.times[infectors[infectors > 0]] - sample.times[1], 
+                       t_inf = inftimes[infectors > 0],
+                       post.sam.trans.rate = post.sam.trans.rate[infectors > 0])
+    sum(log(gen.pdf(inftimes[infectors > 0] - inftimes[infectors[infectors > 0]])*gen.dens.scale*rel.rate))
+  }
+  
+}
+
+#function to for adjustment of transmission rate for individuals who have already been sampled
+#post.sam.trans.rate is the relative likelihood of transmission after sampling compared to before
+#rates are scaled to sum to 1
+#for example, if post.sam.trans.rate is 0.1, then rate = 10/11 before sampling and 1/11 after sampling
+post.sam.trans.adjust <- function(t_sam, t_inf, post.sam.trans.rate){
+  if(t_sam > t_inf){
+    rate <- 1/(1+post.sam.trans.rate)
+  } else if(t_sam <= t_inf){
+    rate <- post.sam.trans.rate/(1+post.sam.trans.rate) 
+  } 
+  return(rate)
 }
 
 ### calculate the log-likelihood of sampling intervals 
-lik_sampletimes <- function(obs, shapeS, meanS, nodetimes, inftimes) {
-  sum(dgamma(nodetimes[1:obs] - inftimes, shape = shapeS, scale = meanS/shapeS, log = TRUE))
+lik_sampletimes <- function(obs, shapeS, meanS, nodetimes, inftimes, sample.nonpar, sample.pdf) {
+  if(sample.nonpar == FALSE) {
+    sum(dgamma(nodetimes[1:obs] - inftimes, shape = shapeS, scale = meanS/shapeS, log = TRUE))
+  }
+  else{
+    sum(log(mapply(FUN = function(sample.pdf, nodetimes, inftimes) {max(sample.pdf(nodetimes - inftimes), 1e-16)}, #TODO right way to handle zeros here
+                   sample.pdf = sample.pdf, nodetimes = nodetimes[1:obs], inftimes = inftimes)))
+  }
 }
 
 ### calculate the log-likelihood of distances 

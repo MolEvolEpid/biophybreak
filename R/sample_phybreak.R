@@ -134,6 +134,11 @@ sample_phybreak <- function(x, nsample, thin = 1, classic = 0, keepphylo = 0, wi
       s.post$dist.s[sa] <- pbe0$p$dist.scale
       s.post$dist.m[sa] <- pbe0$p$dist.mean
       s.post$logLik[sa] <- pbe0$logLikseq + pbe0$logLiksam + pbe0$logLikgen + pbe0$logLikdist + pbe0$logLikcoal
+      s.post$logLikseq[sa] <- pbe0$logLikseq
+      s.post$logLiksam[sa] <- pbe0$logLiksam
+      s.post$logLikgen[sa] <- pbe0$logLikgen
+      s.post$logLikdist[sa] <- pbe0$logLikdist
+      s.post$logLikcoal[sa] <- pbe0$logLikcoal
     }
     
     res <- destroy_pbe(s.post)

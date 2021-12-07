@@ -1,4 +1,4 @@
-#' @useDynLib phybreak
+#' @useDynLib biophybreak
 #' @importFrom Rcpp sourceCpp
 #' @import ape
 #' @import phangorn

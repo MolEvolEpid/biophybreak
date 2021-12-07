@@ -4,11 +4,13 @@
 \name{FMD_2007}
 \alias{FMD_2007}
 \title{Foot-and-Mouth Disease outbreak (2007)}
-\format{A list with two elements:
+\format{
+A list with two elements:
 \describe{
   \item{sequences}{the sequences (class \code{DNAbin})}
   \item{dates}{the sampling days (class \code{Date})}
-}}
+}
+}
 \usage{
 FMD_2007
 }

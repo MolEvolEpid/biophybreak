@@ -4,24 +4,62 @@
 \alias{phybreak}
 \title{Create a phybreak-object from data and prior distributions.}
 \usage{
-phybreak(dataset, times = NULL, mu = NULL, gen.shape = 3,
-  gen.mean = 1, sample.shape = 3, sample.mean = 1,
-  wh.model = "linear", wh.bottleneck = "auto", wh.slope = 1,
-  wh.exponent = 1, wh.level = 0.1, dist.model = "power",
-  dist.exponent = 2, dist.scale = 1, dist.mean = 1,
-  est.gen.mean = TRUE, prior.gen.mean.mean = 1,
-  prior.gen.mean.sd = Inf, est.sample.mean = TRUE,
-  prior.sample.mean.mean = 1, prior.sample.mean.sd = Inf,
-  est.wh.slope = TRUE, prior.wh.slope.shape = 3,
-  prior.wh.slope.mean = 1, est.wh.exponent = TRUE,
-  prior.wh.exponent.shape = 1, prior.wh.exponent.mean = 1,
-  est.wh.level = TRUE, prior.wh.level.shape = 1,
-  prior.wh.level.mean = 0.1, est.dist.exponent = TRUE,
-  prior.dist.exponent.shape = 1, prior.dist.exponent.mean = 1,
-  est.dist.scale = TRUE, prior.dist.scale.shape = 1,
-  prior.dist.scale.mean = 1, est.dist.mean = TRUE,
-  prior.dist.mean.shape = 1, prior.dist.mean.mean = 1,
-  use.tree = FALSE, ...)
+phybreak(
+  dataset,
+  times = NULL,
+  mu = NULL,
+  gen.shape = 3,
+  gen.mean = 1,
+  sample.shape = 3,
+  sample.mean = 1,
+  sample.nonpar = FALSE,
+  sample.density = NULL,
+  gen.type = "parametric",
+  gen.density = NULL,
+  scale.gen.prior = FALSE,
+  post.sam.trans.rate = 1,
+  wh.model = "linear",
+  wh.bottleneck = "auto",
+  wh.slope = 1,
+  wh.exponent = 1,
+  wh.level = 0.1,
+  dist.model = "power",
+  dist.exponent = 2,
+  dist.scale = 1,
+  dist.mean = 1,
+  est.gen.mean = TRUE,
+  prior.gen.mean.mean = 1,
+  prior.gen.mean.sd = Inf,
+  est.sample.mean = TRUE,
+  prior.sample.mean.mean = 1,
+  prior.sample.mean.sd = Inf,
+  est.wh.slope = TRUE,
+  prior.wh.slope.shape = 3,
+  prior.wh.slope.mean = 1,
+  est.wh.exponent = TRUE,
+  prior.wh.exponent.shape = 1,
+  prior.wh.exponent.mean = 1,
+  est.wh.level = TRUE,
+  prior.wh.level.shape = 1,
+  prior.wh.level.mean = 0.1,
+  est.dist.exponent = TRUE,
+  prior.dist.exponent.shape = 1,
+  prior.dist.exponent.mean = 1,
+  est.dist.scale = TRUE,
+  prior.dist.scale.shape = 1,
+  prior.dist.scale.mean = 1,
+  est.dist.mean = TRUE,
+  prior.dist.mean.shape = 1,
+  prior.dist.mean.mean = 1,
+  use.pml = FALSE,
+  base.freq = rep(0.25, 4),
+  sub.rates = rep(1, 6),
+  het.shape = 0.38,
+  inv.sites = 0.3,
+  mut.model = "none",
+  use.tree = FALSE,
+  ...
+)
 }
 \arguments{
 \item{dataset}{An object with sequences plus additional data (class \code{'phybreakdata'}). 
@@ -51,6 +89,23 @@ case by a primary case.}
 infection and sampling of a host.}
 
 \item{sample.mean}{Initial value for the mean sampling interval.}
+
+\item{sample.nonpar}{Whether or not to use a user supplied nonparametric distribution for the time between infection and sampling.}
+
+\item{sample.density}{A user supplied list of sampling times (x values) and probability densities (y values)
+for the amount of time between infection and sampling.
+Can be a density class object, but does not need to be.}
+
+\item{gen.type}{The type of input for the prior for the generation time. Can be 'parametric' (uses gamma distribution), 
+'numeric'for use with a user-supplied density, or 'function' if the user supplied density is already a function.}
+
+\item{gen.density}{Either a numeric distribution with x and y attributes, such as the output of the density() function
+(if gen.type is 'numeric'), or a density function (if 'gen.type' is 'function')}
+
+\item{post.sam.trans.rate}{The rate of transmission after sampling relative to transmission prior to sampling.
+"1" means that there is it is not any less likely for an individual to infect another individual after being sampled.
+"0" means that it is not possible for an individual to infect another after being sampled.
+"0.1" means that an individual is 10 times less likely to infect another after being sampled.}
 
 \item{wh.model}{The model for within-host pathogen dynamics (effective pathogen population size = 
 N*gE = actual population size * pathogen generation time), used to simulate coalescence events. Names and numbers are allowed.

@@ -4,14 +4,16 @@
 \name{AvianFluH7N7_2003}
 \alias{AvianFluH7N7_2003}
 \title{Avian influenza (H7N7) epidemic}
-\format{A list with four elements:
+\format{
+A list with four elements:
 \describe{
   \item{sequences_HA}{the HA gene}
   \item{sequences_NA}{the NA gene}
   \item{sequences_PB2}{the PB2 gene}
   \item{sampledays}{the days at which the samples were taken (or the detection day + 2 days, for the 10 
   unsampled farms)}
-}}
+}
+}
 \usage{
 AvianFluH7N7_2003
 }

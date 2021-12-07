@@ -4,7 +4,7 @@
 \alias{thin.phybreak}
 \title{Remove posterior samples from a phybreak-object.}
 \usage{
-\method{thin}{phybreak}(x, thin = 1, nkeep = Inf, ...)
+thin.phybreak(x, thin = 1, nkeep = Inf, ...)
 }
 \arguments{
 \item{x}{An object of class \code{phybreak}.}

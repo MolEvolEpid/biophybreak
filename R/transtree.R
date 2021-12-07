@@ -257,39 +257,50 @@ transtree <- function(x, method = c("count", "edmonds", "mpc", "mtcc"), samplesi
 ### function to obtain a transmission tree based on most likely infectors, selecting the tree among posterior trees with
 ### highest support, plus (if requested) means and standard deviations of infection times called by transtree
 .mpcinfector <- function(x, samplesize, phylo.class = FALSE, includetimes = FALSE) {
-    ### initialize some constants
-    chainlength <- length(x$s$mu)
-    nsamples <- x$d$nsamples
-    obsize <- x$p$obs
-    samplerange <- (chainlength - samplesize + 1):chainlength
-    posteriorsamples <- x$s$infectors[, samplerange]
-    
-    ### obtaining the result in steps
-    
-    # matrix containing posterior support for each infector in each tree
-    allsupports <- matrix(0, nrow = obsize, ncol = samplesize)
-    for (hostID in 1:obsize) {
-        for (infector in 0:obsize) {
-            allsupports[hostID, posteriorsamples[hostID, ] == infector] <- sum(posteriorsamples[hostID, ] == infector)
-        }
+  ### initialize some constants
+  chainlength <- length(x$s$mu)
+  nsamples <- x$d$nsamples
+  obsize <- x$p$obs
+  samplerange <- (chainlength - samplesize + 1):chainlength
+  posteriorsamples <- x$s$infectors[, samplerange]
+  
+  ### obtaining the result in steps
+  
+  # matrix containing posterior support for each infector in each tree
+  allsupports <- matrix(0, nrow = obsize, ncol = samplesize)
+  for (hostID in 1:obsize) {
+    for (infector in 0:obsize) {
+      allsupports[hostID, posteriorsamples[hostID, ] == infector] <- sum(posteriorsamples[hostID, ] == infector)
     }
-    
-    # 
-    besttree <- which.max(colSums(log(allsupports)))
-    if (phylo.class) 
-        return(besttree + samplerange[1] - 1)
-    res <- matrix(c(posteriorsamples[, besttree], allsupports[, besttree]), ncol = 2)
-    
-    if (includetimes) {
-        timesums <- with(x, rowSums(s$inftimes[, samplerange] * (s$infectors[, samplerange] == res[, 1])))
-        timesumsqs <- with(x, rowSums((s$inftimes[, samplerange]^2) * (posteriorsamples == res[, 1])))
-        res <- cbind(res, timesums/res[, 2])
-        res <- cbind(res, sqrt((timesumsqs - res[, 3]^2 * res[, 2])/(res[, 2] - 1)))
-        res <- cbind(res, x$s$inftimes[, besttree + samplerange[1] - 1])
-    }
-    
-    
-    return(res)
+  }
+  
+  # 
+  prodsupports <- colSums(log(allsupports))
+  #besttree <- which.max(colSums(log(allsupports)))
+  #find all MPC trees
+  MPCtrees <- which(prodsupports == max(prodsupports))
+  #use logLiksam to tiebreak MPC trees if available
+  #check if it is available
+  if(!is.null(x$s[["logLiksam"]])){
+    besttree <- MPCtrees[which.max(x$s$logLiksam[MPCtrees + samplerange[1] - 1])]
+  } else{
+    besttree <- MPCtrees[1] #otherwise use first one
+  }
+  
+  if (phylo.class) 
+    return(besttree + samplerange[1] - 1)
+  res <- matrix(c(posteriorsamples[, besttree], allsupports[, besttree]), ncol = 2)
+  
+  if (includetimes) {
+    timesums <- with(x, rowSums(s$inftimes[, samplerange] * (s$infectors[, samplerange] == res[, 1])))
+    timesumsqs <- with(x, rowSums((s$inftimes[, samplerange]^2) * (posteriorsamples == res[, 1])))
+    res <- cbind(res, timesums/res[, 2])
+    res <- cbind(res, sqrt((timesumsqs - res[, 3]^2 * res[, 2])/(res[, 2] - 1)))
+    res <- cbind(res, x$s$inftimes[, besttree + samplerange[1] - 1])
+  }
+  
+  
+  return(res)
 }
 
 

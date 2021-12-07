@@ -2,26 +2,26 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 .likseq <- function(SNPs, SNPfreqs, nodeparents, nodetimes, mutrate, Nsamples) {
-    .Call('_phybreak_likseq', PACKAGE = 'phybreak', SNPs, SNPfreqs, nodeparents, nodetimes, mutrate, Nsamples)
+    .Call('_biophybreak_likseq', PACKAGE = 'biophybreak', SNPs, SNPfreqs, nodeparents, nodetimes, mutrate, Nsamples)
 }
 
 .likseqenv <- function(pbenv, nodestochange, tips) {
-    .Call('_phybreak_likseqenv', PACKAGE = 'phybreak', pbenv, nodestochange, tips)
+    .Call('_biophybreak_likseqenv', PACKAGE = 'biophybreak', pbenv, nodestochange, tips)
 }
 
 .mcctree <- function(pars, tims, dims) {
-    .Call('_phybreak_CCphylotree', PACKAGE = 'phybreak', pars, tims, dims)
+    .Call('_biophybreak_CCphylotree', PACKAGE = 'biophybreak', pars, tims, dims)
 }
 
 .mtcctree <- function(pars, tims, dims) {
-    .Call('_phybreak_CCtranstree', PACKAGE = 'phybreak', pars, tims, dims)
+    .Call('_biophybreak_CCtranstree', PACKAGE = 'biophybreak', pars, tims, dims)
 }
 
 .ptr <- function(pars, ID) {
-    .Call('_phybreak_ptr', PACKAGE = 'phybreak', pars, ID)
+    .Call('_biophybreak_ptr', PACKAGE = 'biophybreak', pars, ID)
 }
 
 .sctwh3 <- function(tle) {
-    .Call('_phybreak_sctwh3', PACKAGE = 'phybreak', tle)
+    .Call('_biophybreak_sctwh3', PACKAGE = 'biophybreak', tle)
 }
 

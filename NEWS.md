@@ -1,3 +1,10 @@
+# biophybreak 0.6.0
+
+### Major Changes
+* Added support for non-parametric infection time and generation time distributions
+* Added support for penalizing transmission probability after sampling
+* Added support for GTR mutation models
+
 # phybreak 0.5.2
 
 ### BUG FIXES

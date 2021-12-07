@@ -196,7 +196,8 @@ transphylo2phybreak <- function(vars, resample = FALSE, resamplepars = NULL) {
   ### infection times and infectors
   if(is.null(vars$sim.infection.times) | is.null(vars$sim.infectors) | resample) {
     resample <- TRUE
-    inftimes <- .rinftimes(samtimes[1:nhosts], resamplepars$sample.mean, resamplepars$sample.shape)
+    inftimes <- .rinftimes(samtimes[1:nhosts], resamplepars$sample.mean, resamplepars$sample.shape, 
+                           resamplepars$sample.nonpar, resamplepars$sample.icdf)
     infectors <- .rinfectors(inftimes, resamplepars$gen.mean, resamplepars$gen.shape)
   } else {
     inftimes <- as.numeric(vars$sim.infection.times - refdate)
@@ -328,7 +329,7 @@ whichgeneration <- function(infectors, hostID) {
 
 
 ### random infection times given sampling times and sampling interval distribution
-.rinftimes <- function(st, meanS, shapeS) {
+.rinftimes <- function(st, meanS, shapeS, sample.nonpar, sample.icdf) {
   ### tests
   if(class(st) != "numeric" && class(st) != "integer") {
     stop(".rinftimes called with non-numeric sampling times")
@@ -337,7 +338,14 @@ whichgeneration <- function(infectors, hostID) {
   if(shapeS <= 0) stop(".rinftimes called with non-positive shape parameter")
   
   ### function body
-  st - rgamma(length(st), shape = shapeS, scale = meanS/shapeS)
+  if(sample.nonpar == FALSE){
+    st - rgamma(length(st), shape = shapeS, scale = meanS/shapeS)
+  }
+  else{
+    #st - sample.icdf[[hostID]](runif(1))
+    #st - sapply(1:length(st), FUN = function(x, sample.icdf){sample.icdf[[x]](runif(1))}, sample.icdf)
+    mapply(FUN = function(st, sample.icdf) {st - sample.icdf(runif(1))}, st, sample.icdf)
+  }
 }
 
 ### random infectors times given infection times and generation interval distribution

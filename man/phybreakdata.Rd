@@ -4,9 +4,16 @@
 \alias{phybreakdata}
 \title{Create a phybreakdata-object from raw data.}
 \usage{
-phybreakdata(sequences, sample.times, spatial = NULL,
-  sample.names = NULL, host.names = sample.names,
-  sim.infection.times = NULL, sim.infectors = NULL, sim.tree = NULL)
+phybreakdata(
+  sequences,
+  sample.times,
+  spatial = NULL,
+  sample.names = NULL,
+  host.names = sample.names,
+  sim.infection.times = NULL,
+  sim.infectors = NULL,
+  sim.tree = NULL
+)
 }
 \arguments{
 \item{sequences}{Sequence data of class \code{'DNAbin'}, \code{'phyDat'}, or a \code{matrix} with nucleotides, 

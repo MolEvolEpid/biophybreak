@@ -4,11 +4,13 @@
 \name{M_tuberculosis_2013}
 \alias{M_tuberculosis_2013}
 \title{Mycobacterium tuberculosis outbreak}
-\format{A list with two elements:
+\format{
+A list with two elements:
 \describe{
   \item{sequences_Mtb}{the sequences (class \code{DNAbin})}
   \item{dates_Mtb}{the sampling days (class \code{Date})}
-}}
+}
+}
 \usage{
 M_tuberculosis_2013
 }

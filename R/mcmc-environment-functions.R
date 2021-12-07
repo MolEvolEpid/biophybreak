@@ -92,12 +92,26 @@ build_pbe <- function(phybreak.obj) {
   v <- phybreak2environment(v)
   
   ### complete likarray and calculate log-likelihood of sequences
-  .likseqenv(le, (d$nsamples + 1):(2 * d$nsamples - 1), 1:d$nsamples)
-  
+  if(h$use.pml == FALSE){
+    .likseqenv(le, (d$nsamples + 1):(2 * d$nsamples - 1), 1:d$nsamples)
+  } else if(h$use.pml == TRUE){
+    #print(get_phylo(phybreak.obj))
+    #print(d$sequences)
+    #print(p$mu)
+    #print(p$base.freq)
+    #print(p$sub.rates)
+    #print(p$het.shape)
+    #print(p$inv.sites)
+    logLikseq <- phangorn::pml(get_phylo(phybreak.obj), d$sequences, rate = p$mu, 
+                               bf = p$base.freq, Q = p$sub.rates, 
+                               shape = p$het.shape, inv = p$inv.sites)$logLik
+    #print(paste0("logLikseq = ", logLikseq))
+  }
   
   ### calculate the other log-likelihoods
-  logLiksam <- lik_sampletimes(p$obs, p$sample.shape, p$sample.mean, v$nodetimes, v$inftimes)
-  logLikgen <- lik_gentimes(p$gen.shape, p$gen.mean, v$inftimes, v$infectors)
+  logLiksam <- lik_sampletimes(p$obs, p$sample.shape, p$sample.mean, v$nodetimes, v$inftimes, p$sample.nonpar, p$sample.pdf)
+  logLikgen <- lik_gentimes(p$gen.shape, p$gen.mean, v$inftimes, v$infectors, p$gen.nonpar, p$gen.pdf, d$sample.times,
+                            p$gen.dens.scale, p$post.sam.trans.rate)
   logLikcoal <- lik_coaltimes(le)
   logLikdist <- lik_distances(p$dist.model, p$dist.exponent, p$dist.scale, p$dist.mean, v$infectors, d$distances)
   
@@ -146,6 +160,7 @@ propose_pbe <- function(f) {
   ### Making variables and parameters available within the function
   le <- environment()
   d <- pbe0$d
+  h <- pbe0$h
   v <- pbe1$v
   p <- pbe1$p
   
@@ -172,17 +187,46 @@ propose_pbe <- function(f) {
   
   
   if (!is.null(chnodes)) {
-    .likseqenv(pbe1, chnodes, nodetips)
+    if(h$use.pml == FALSE){
+      .likseqenv(pbe1, chnodes, nodetips)
+    } else if(h$use.pml == TRUE){
+      #print("inftimes")
+      #print(v$inftimes)
+      #print("infectors")
+      #print(v$infectors)
+      #print("nodetypes")
+      #print(v$nodetypes)
+      #print("nodetimes")
+      #print(v$nodetimes)
+      #print("nodehosts")
+      #print(v$nodehosts)
+      #print("nodeparents")
+      #print(v$nodeparents)
+      #vars <- list(
+      #               inftimes = v$inftimes,
+      #               infectors = v$infectors,
+      #               nodetimes = v$nodetimes[v$nodetypes %in% c("s", "x", "c")],
+      #               nodeparents = v$nodeparents[v$nodetypes %in% c("s", "x", "c")],
+      #               nodehosts = v$nodehosts[v$nodetypes %in% c("s", "x", "c")],
+      #               nodetypes = v$nodetypes
+      #             )
+      logLikseq <- phangorn::pml(phybreak2phylo(environment2phybreak(v), d$names), d$sequences, rate = p$mu, 
+                                 bf = p$base.freq, Q = p$sub.rates, 
+                                 shape = p$het.shape, inv = p$inv.sites)$logLik
+      copy2pbe1("logLikseq", le)
+    }
   }
   
+  #print(pbe1$logLikseq)
   
   if (f == "phylotrans" || f == "trans" || f == "mG") {
-    logLikgen <- lik_gentimes(p$gen.shape, p$gen.mean, v$inftimes, v$infectors)
+    logLikgen <- lik_gentimes(p$gen.shape, p$gen.mean, v$inftimes, v$infectors, p$gen.nonpar, p$gen.pdf, d$sample.times, 
+                              p$gen.dens.scale, p$post.sam.trans.rate)
     copy2pbe1("logLikgen", le)
   }
   
   if (f == "phylotrans" || f == "trans" || f == "mS") {
-    logLiksam <- lik_sampletimes(p$obs, p$sample.shape, p$sample.mean, v$nodetimes, v$inftimes)
+    logLiksam <- lik_sampletimes(p$obs, p$sample.shape, p$sample.mean, v$nodetimes, v$inftimes, p$sample.nonpar, p$sample.pdf)
     copy2pbe1("logLiksam", le)
   }
   

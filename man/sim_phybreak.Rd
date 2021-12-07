@@ -5,13 +5,30 @@
 \alias{sim.phybreak}
 \title{Outbreak simulation.}
 \usage{
-sim_phybreak(obsize = 50, popsize = NA, samplesperhost = 1,
-  R0 = 1.5, spatial = FALSE, gen.shape = 10, gen.mean = 1,
-  sample.shape = 10, sample.mean = 1, additionalsampledelay = 0,
-  wh.model = "linear", wh.bottleneck = "auto", wh.slope = 1,
-  wh.exponent = 1, wh.level = 0.1, dist.model = "power",
-  dist.exponent = 2, dist.scale = 1, mu = 1e-04,
-  sequence.length = 10000, ...)
+sim_phybreak(
+  obsize = 50,
+  popsize = NA,
+  samplesperhost = 1,
+  R0 = 1.5,
+  spatial = FALSE,
+  gen.shape = 10,
+  gen.mean = 1,
+  sample.shape = 10,
+  sample.mean = 1,
+  infection.ages = NULL,
+  additionalsampledelay = 0,
+  wh.model = "linear",
+  wh.bottleneck = "auto",
+  wh.slope = 1,
+  wh.exponent = 1,
+  wh.level = 0.1,
+  dist.model = "power",
+  dist.exponent = 2,
+  dist.scale = 1,
+  mu = 1e-04,
+  sequence.length = 10000,
+  ...
+)
 
 sim.phybreak(...)
 }
@@ -36,6 +53,8 @@ model transmission probabilities between the hosts.}
 \item{sample.shape}{The shape parameter of the gamma-distributed sampling interval.}
 
 \item{sample.mean}{The mean sampling interval (for the first sample of each host).}
+
+\item{infection.ages}{How long the hosts have been infected at the time of sampling.}
 
 \item{additionalsampledelay}{Sampling intervals since first sampling times of each host. Values in this vector will be 
 used first for all additional samples of host 1, then of host 2, etc.}

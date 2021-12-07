@@ -5,8 +5,15 @@
 \alias{burnin.phybreak}
 \title{MCMC updating of a phybreak-object.}
 \usage{
-burnin_phybreak(x, ncycles, classic = 0, keepphylo = 0,
-  withinhost_only = 0, parameter_frequency = 1, status_interval = 10)
+burnin_phybreak(
+  x,
+  ncycles,
+  classic = 0,
+  keepphylo = 0,
+  withinhost_only = 0,
+  parameter_frequency = 1,
+  status_interval = 10
+)
 
 burnin.phybreak(...)
 }

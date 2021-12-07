@@ -4,7 +4,9 @@
 \name{FMD_2001}
 \alias{FMD_2001}
 \title{Foot-and-Mouth Disease outbreak (2001)}
-\format{A matrix with 15 rows (one per farm) and 8196 column (one per nucleotide); the names contain sampling days}
+\format{
+A matrix with 15 rows (one per farm) and 8196 column (one per nucleotide); the names contain sampling days
+}
 \usage{
 FMD_2001
 }

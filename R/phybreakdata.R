@@ -242,6 +242,8 @@ phybreakdata <- function(sequences, sample.times, spatial = NULL, sample.names =
       names(sim.infection.times) <- orderedhosts
     }
     if(!all(sim.infection.times < sample.times[1:length(allhosts)])) {
+      print(sim.infection.times)
+      print(sample.times[1:length(allhosts)])
       stop("all infection times should be before the sampling times")
     }
     res <- c(res, list(sim.infection.times = sim.infection.times))

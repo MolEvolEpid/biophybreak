@@ -14,6 +14,7 @@
 #' @param gen.mean The mean generation interval.
 #' @param sample.shape The shape parameter of the gamma-distributed sampling interval.
 #' @param sample.mean The mean sampling interval (for the first sample of each host).
+#' @param infection.ages How long the hosts have been infected at the time of sampling.
 #' @param additionalsampledelay Sampling intervals since first sampling times of each host. Values in this vector will be 
 #'   used first for all additional samples of host 1, then of host 2, etc.
 #' @param wh.model The model for within-host pathogen dynamics (effective pathogen population size = 
@@ -57,6 +58,7 @@ sim_phybreak <- function(obsize = 50, popsize = NA, samplesperhost = 1,
                          R0 = 1.5, spatial = FALSE,
                          gen.shape = 10, gen.mean = 1, 
                          sample.shape = 10, sample.mean = 1,
+                         infection.ages = NULL,
                          additionalsampledelay = 0,
                          wh.model = "linear", wh.bottleneck = "auto", wh.slope = 1, wh.exponent = 1, wh.level = 0.1,
                          dist.model = "power", dist.exponent = 2, dist.scale = 1,
@@ -66,9 +68,8 @@ sim_phybreak <- function(obsize = 50, popsize = NA, samplesperhost = 1,
   if(exists("old_arguments$shape.gen")) gen.shape <- old_arguments$shape.gen
   if(exists("old_arguments$mean.gen")) gen.mean <- old_arguments$mean.gen
   if(exists("old_arguments$shape.sample")) sample.shape <- old_arguments$shape.sample
-  if(exists("old_arguments$mean.sample")) sample.mean <- old_arguments$sample.mean
+  if(exists("old_arguments$mean.sample")) sample.mean <- old_arguments$sample.mean #TODO: should this be mean.sample?
 
-  
   ### tests
   if(all(is.na(c(obsize, popsize)))) {
     stop("give an outbreak size (obsize) and/or a population size (popsize)")
@@ -94,20 +95,20 @@ sim_phybreak <- function(obsize = 50, popsize = NA, samplesperhost = 1,
   if(is.na(obsize)) {
     if(spatial) {
       res <- sim_outbreak_spatial(popsize, R0, gen.shape, gen.mean,
-                          sample.shape, sample.mean, dist.model, dist.exponent, dist.scale)
+                          sample.shape, sample.mean, infection.ages, dist.model, dist.exponent, dist.scale)
     } else {
       res <- sim_outbreak(popsize, R0, gen.shape, gen.mean,
-                          sample.shape, sample.mean)
+                          sample.shape, sample.mean, infection.ages)
     }
      obsize <- res$obs
      if(obsize == 1) return(c("Outbreak size = 1"))
   } else {
     if(spatial) {
       res <- sim_outbreak_size_spatial(obsize, popsize, R0, gen.shape, gen.mean,
-                               sample.shape, sample.mean, dist.model, dist.exponent, dist.scale)
+                               sample.shape, sample.mean, infection.ages, dist.model, dist.exponent, dist.scale)
     } else {
       res <- sim_outbreak_size(obsize, popsize, R0, gen.shape, gen.mean,
-                               sample.shape, sample.mean)
+                               sample.shape, sample.mean, infection.ages)
     }
   }
   if(any(samplesperhost < 1)) stop("samplesperhost should be positive")
@@ -163,31 +164,31 @@ sim.phybreak <- function(...) {
 
 ### simulate an outbreak of a particular size by repeating
 ### simulations until obsize is obtained
-sim_outbreak_size <- function(obsize, Npop, R0, aG, mG, aS, mS) {
+sim_outbreak_size <- function(obsize, Npop, R0, aG, mG, aS, mS, infection.ages) {
   if(is.na(Npop)) {
     Npop <- obsize
     while(1 - obsize/Npop < exp(-R0* obsize/Npop)) {Npop <- Npop + 1}
   } 
   
-  sim <- sim_outbreak(Npop, R0, aG, mG, aS, mS)
+  sim <- sim_outbreak(Npop, R0, aG, mG, aS, mS, infection.ages)
   
   while(sim$obs != obsize) {
-    sim <- sim_outbreak(Npop, R0, aG, mG, aS, mS)
+    sim <- sim_outbreak(Npop, R0, aG, mG, aS, mS, infection.ages)
   }
   
   return(sim)
 }
 
-sim_outbreak_size_spatial <- function(obsize, Npop, R0, aG, mG, aS, mS, dist.model, dist.exponent, dist.scale) {
+sim_outbreak_size_spatial <- function(obsize, Npop, R0, aG, mG, aS, mS, infection.ages, dist.model, dist.exponent, dist.scale) {
   if(is.na(Npop)) {
     Npop <- obsize
     while(1 - obsize/Npop < exp(-R0* obsize/Npop)) {Npop <- Npop + 1}
   } 
   
-  sim <- sim_outbreak_spatial(Npop, R0, aG, mG, aS, mS, dist.model, dist.exponent, dist.scale)
+  sim <- sim_outbreak_spatial(Npop, R0, aG, mG, aS, mS, infection.ages, dist.model, dist.exponent, dist.scale)
   
   while(sim$obs != obsize) {
-    sim <- sim_outbreak_spatial(Npop, R0, aG, mG, aS, mS, dist.model, dist.exponent, dist.scale)
+    sim <- sim_outbreak_spatial(Npop, R0, aG, mG, aS, mS, infection.ages, dist.model, dist.exponent, dist.scale)
   }
   
   return(sim)
@@ -195,7 +196,7 @@ sim_outbreak_size_spatial <- function(obsize, Npop, R0, aG, mG, aS, mS, dist.mod
 
 
 ### simulate an outbreak
-sim_outbreak <- function(Npop, R0, aG, mG, aS, mS) {
+sim_outbreak <- function(Npop, R0, aG, mG, aS, mS, infection.ages) {
   ### initialize
   inftimes <- c(0, rep(10000, Npop-1))
   sources <- rep(0,Npop)
@@ -227,7 +228,12 @@ sim_outbreak <- function(Npop, R0, aG, mG, aS, mS) {
   
   ### determine outbreaksize and sampling times
   obs <- sum(inftimes<10000)
-  samtimes <- inftimes + rgamma(Npop, aS, aS/mS)
+  if(is.null(infection.ages)){
+    samtimes <- inftimes + rgamma(Npop, aS, aS/mS)
+  }
+  else{
+    samtimes <- inftimes + infection.ages
+  }
   
   ### order hosts by sampling times, and renumber hostIDs
   ### so that the uninfected hosts can be discarded
@@ -250,7 +256,7 @@ sim_outbreak <- function(Npop, R0, aG, mG, aS, mS) {
 }
 
 ### simulate a spatial outbreak
-sim_outbreak_spatial <- function(Npop, R0, aG, mG, aS, mS, dist.model, dist.exponent, dist.scale) {
+sim_outbreak_spatial <- function(Npop, R0, aG, mG, aS, mS, infection.ages, dist.model, dist.exponent, dist.scale) {
   ### initialize spatial population model
   x <- runif(Npop, 0, sqrt(Npop))
   y <- runif(Npop, 0, sqrt(Npop))
@@ -296,7 +302,12 @@ sim_outbreak_spatial <- function(Npop, R0, aG, mG, aS, mS, dist.model, dist.expo
   
   ### determine outbreaksize and sampling times
   obs <- sum(inftimes<10000)
-  samtimes <- inftimes + rgamma(Npop, aS, aS/mS)
+  if(is.null(infection.ages)){
+    samtimes <- inftimes + rgamma(Npop, aS, aS/mS)
+  }
+  else{
+    samtimes <- inftimes + infection.ages
+  }
   
   ### order hosts by sampling times, and renumber hostIDs
   ### so that the uninfected hosts can be discarded

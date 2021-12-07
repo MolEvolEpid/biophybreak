@@ -1,15 +1,18 @@
-Package: phybreak
+Package: biophybreak
 Type: Package
-Title: Analysis of Outbreaks with Sequence Data
-Version: 0.5.2
-Date: 2019-09-12
-Authors@R: person("Don", "Klinkenberg", 
-    email = "don@xs4all.nl", role = c("aut", "cre"))
+Title: Analysis of Outbreaks with Sequence and Biomarker Data
+Version: 0.6.0
+Date: 2021-10-20
+Authors@R: c(person("Don", "Klinkenberg", 
+    email = "don@xs4all.nl", role = c("aut", "cre")),
+	   person("Erik", "Lundgren",
+    email = "elundgren@lanl.gov", role = "aut"))
 Description: Implementation the outbreak analysis method described by 
     Klinkenberg et al (2017) <doi:10.1371/journal.pcbi.1005495>. 
     Simulate outbreaks, analyse datasets by creating samples from the 
     posterior distribution with a Markov-Chain Monte Carlo sampler, 
-    and summarize the output.
+    and summarize the output. Modifications allow the use of individual specific
+    non-parametric infection time distributions that can be obtained with biomarkers.
 License: GPL (>=2)
 LazyData: TRUE
 Depends:
@@ -30,5 +33,5 @@ Suggests:
     knitr,
     rmarkdown
 LinkingTo: Rcpp
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.1
 VignetteBuilder: knitr
