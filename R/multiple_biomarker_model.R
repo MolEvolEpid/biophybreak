@@ -18,6 +18,8 @@ sim.biomarkers <- function(t.inf,
                            mub, Sigmab, sigmae, 
                            which.biomarkers = matrix(1, nrow = length(t.inf), ncol = 5), 
                            seed = sample(1e9, 1)){
+  #set RNG seed 
+  set.seed(seed)
   #number of individuals to simulate
   nInds <- length(t.inf)
   
@@ -103,13 +105,16 @@ mbm.predict <- function(BED = rep(NA, length(CD4)), LAg = rep(NA, length(CD4)), 
                         max.seroconvert.delay = 2/12,
                         output.raw = FALSE,
                         seed = sample(1e9, 1)){
+  #set RNG seed 
+  set.seed(seed)
+  
   #output can be "continuous", "numeric", or "both"
   
   #put into matrix format for JAGS model if it is not already
   if(!is.matrix(CD4)){
     cd4.test <- sqrt(matrix(CD4, ncol = 1))
   } else{
-    cd4.test <- CD4
+    cd4.test <- sqrt(CD4)
   }
   if(!is.matrix(pol)){
     pol.test <- matrix(pol, ncol = 1)
@@ -117,27 +122,27 @@ mbm.predict <- function(BED = rep(NA, length(CD4)), LAg = rep(NA, length(CD4)), 
     pol.test <- pol
   }
   if(!is.matrix(BED)){
-    bed.test <- matrix(BED, ncol = dim(CD4)[2])
+    bed.test <- matrix(BED, ncol = dim(cd4.test)[2])
   } else{
     bed.test <- BED
   }
   if(!is.matrix(LAg)){
-    lag.test <- matrix(LAg, ncol = dim(CD4)[2])
+    lag.test <- matrix(LAg, ncol = dim(cd4.test)[2])
   } else{
     lag.test <- LAg
   }
   if(!is.matrix(pol2)){
-    pol2.test <- matrix(pol2, ncol = dim(CD4)[2])
+    pol2.test <- matrix(pol2, ncol = dim(cd4.test)[2])
   } else{
     pol2.test <- pol2
   }
   if(!is.matrix(t.sam.delay)){
-    t.sam.delay.test <- matrix(t.sam.delay, ncol = dim(CD4)[2])
+    t.sam.delay.test <- matrix(t.sam.delay, ncol = dim(cd4.test)[2])
   } else{
     t.sam.delay.test <- t.sam.delay
   }
   if(!is.matrix(t.CD4.delay)){
-    t.CD4.delay.test <- matrix(t.CD4.delay, ncol = dim(CD4)[2])
+    t.CD4.delay.test <- matrix(t.CD4.delay, ncol = dim(cd4.test)[2])
   } else{
     t.CD4.delay.test <- t.CD4.delay
   }
