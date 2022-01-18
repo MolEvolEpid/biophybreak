@@ -23,8 +23,10 @@ update_mu <- function() {
     logaccprob <- pbe1$logLikseq - pbe0$logLikseq
     
     ### accept or reject
-    if (runif(1) < exp(logaccprob)) {
+    if(!is.na(exp(logaccprob))){
+      if (runif(1) < exp(logaccprob)) {
         accept_pbe("mu")
+      }
     }
 }
 
@@ -55,8 +57,10 @@ update_mS <- function() {
     logaccprob <- pbe1$logLikcoal - pbe0$logLikcoal
     
     ### accept or reject
-    if (runif(1) < exp(logaccprob)) {
-      accept_pbe("mS")
+    if(!is.na(exp(logaccprob))){
+      if (runif(1) < exp(logaccprob)) {
+        accept_pbe("mS")
+      }
     }
 }
 
@@ -118,9 +122,12 @@ update_wh_slope <- function() {
       dgamma(pbe0$p$wh.slope, shape = h$wh.s.sh, scale = h$wh.s.av/h$wh.s.sh, log = TRUE)
     
     ### accept or reject
-    if (runif(1) < exp(logaccprob)) {
+    if(!is.na(exp(logaccprob))){
+      if (runif(1) < exp(logaccprob)) {
         accept_pbe("wh.slope")
+      }
     }
+    
 }
 
 update_wh_exponent <- function() {
@@ -151,8 +158,10 @@ update_wh_exponent <- function() {
     dgamma(pbe0$p$wh.exponent, shape = h$wh.e.sh, scale = h$wh.e.av/h$wh.e.sh, log = TRUE)
   
   ### accept or reject
-  if (runif(1) < exp(logaccprob)) {
-    accept_pbe("wh.exponent")
+  if(!is.na(exp(logaccprob))){
+    if (runif(1) < exp(logaccprob)) {
+      accept_pbe("wh.exponent")
+    }
   }
 }
 
@@ -184,8 +193,10 @@ update_wh_level <- function() {
     dgamma(pbe0$p$wh.level, shape = h$wh.0.sh, scale = h$wh.0.av/h$wh.0.sh, log = TRUE)
   
   ### accept or reject
-  if (runif(1) < exp(logaccprob)) {
-    accept_pbe("wh.level")
+  if(!is.na(exp(logaccprob))){
+    if (runif(1) < exp(logaccprob)) {
+      accept_pbe("wh.level")
+    }
   }
 }
 
@@ -217,8 +228,10 @@ update_dist_exponent <- function() {
     dgamma(pbe0$p$dist.exponent - 1, shape = h$dist.e.sh, scale = h$dist.e.av/h$dist.e.sh, log = TRUE)
   
   ### accept or reject
-  if (runif(1) < exp(logaccprob)) {
-    accept_pbe("dist.exponent")
+  if(!is.na(exp(logaccprob))){
+    if (runif(1) < exp(logaccprob)) {
+      accept_pbe("dist.exponent")
+    }
   }
 }
 
@@ -250,8 +263,10 @@ update_dist_scale <- function() {
     dgamma(pbe0$p$dist.scale, shape = h$dist.s.sh, scale = h$dist.s.av/h$dist.s.sh, log = TRUE)
   
   ### accept or reject
-  if (runif(1) < exp(logaccprob)) {
-    accept_pbe("dist.scale")
+  if(!is.na(exp(logaccprob))){
+    if (runif(1) < exp(logaccprob)) {
+      accept_pbe("dist.scale")
+    }
   }
 }
 
@@ -283,7 +298,9 @@ update_dist_mean <- function() {
     dgamma(pbe0$p$dist.mean, shape = h$dist.m.sh, scale = h$dist.m.av/h$dist.m.sh, log = TRUE)
   
   ### accept or reject
-  if (runif(1) < exp(logaccprob)) {
-    accept_pbe("dist.mean")
+  if(!is.na(exp(logaccprob))){
+    if (runif(1) < exp(logaccprob)) {
+      accept_pbe("dist.mean")
+    }
   }
 }

@@ -118,8 +118,10 @@ update_host_withinhost <- function(hostID) {
   logaccprob <- pbe1$logLikseq - pbe0$logLikseq + logproposalratio
   
   ### accept or reject
-  if (runif(1) < exp(logaccprob)) {
-    accept_pbe("withinhost")
+  if(!is.na(exp(logaccprob))){
+    if (runif(1) < exp(logaccprob)) {
+      accept_pbe("withinhost")
+    }
   }
 }
 
@@ -503,8 +505,10 @@ update_host_phylotrans <- function(hostID, which_protocol) {
       propose_pbe("phylotrans")
       logacceptanceprob <- pbe1$logLikseq + pbe1$logLikgen + pbe1$logLiksam + pbe1$logLikdist + pbe1$logLiktoporatio -
         pbe0$logLikseq - pbe0$logLikgen - pbe0$logLiksam - pbe0$logLikdist + pbe1$logproposalratio
-      if (runif(1) < exp(logacceptanceprob)) {
-        accept_pbe("phylotrans")
+      if(!is.na(exp(logacceptanceprob))){
+        if (runif(1) < exp(logacceptanceprob)) {
+          accept_pbe("phylotrans")
+        }
       }
     }
     
@@ -544,8 +548,10 @@ update_host_phylotrans <- function(hostID, which_protocol) {
           rewire_pullnodes_complete(pbe1$hostID)
         }
         propose_pbe("withinhost")
-        if(runif(1) < pbe1$logLikseq - pbe0$logLikseq) {
-          accept_pbe("withinhost")
+        if(!is.na(pbe1$logLikseq - pbe0$logLikseq)){
+          if(runif(1) < pbe1$logLikseq - pbe0$logLikseq) {
+            accept_pbe("withinhost")
+          }
         }
       }
     }
@@ -562,8 +568,10 @@ update_host_phylotrans <- function(hostID, which_protocol) {
       pbe1$v$nodehosts[edgeid] <- host_of_edge
       rewire_pullnodes_complete(pbe1$hostID)
       propose_pbe("withinhost")
-      if(runif(1) < pbe1$logLikseq - pbe0$logLikseq) {
-        accept_pbe("withinhost")
+      if(!is.na(pbe1$logLikseq - pbe0$logLikseq)){
+        if(runif(1) < pbe1$logLikseq - pbe0$logLikseq) {
+          accept_pbe("withinhost")
+        }
       }
     }
   }
@@ -619,8 +627,10 @@ update_host_phylotrans <- function(hostID, which_protocol) {
       pbe0$logLikgen - pbe0$logLiksam - pbe0$logLikcoal - pbe0$logLikdist + logproposalratio
     
     ### accept or reject
-    if (runif(1) < exp(logaccprob)) {
-      accept_pbe("trans")
+    if(!is.na(exp(logaccprob))){
+      if (runif(1) < exp(logaccprob)) {
+        accept_pbe("trans")
+      }
     }
   }
   
@@ -691,8 +701,10 @@ update_host_phylotrans <- function(hostID, which_protocol) {
       logproposalratio
     
     ### accept or reject
-    if (runif(1) < exp(logaccprob)) {
-      accept_pbe("trans")
+    if(!is.na(exp(logaccprob))){
+      if (runif(1) < exp(logaccprob)) {
+        accept_pbe("trans")
+      }
     }
   }
   
@@ -803,8 +815,10 @@ update_host_phylotrans <- function(hostID, which_protocol) {
       logproposalratio
     
     ### accept or reject
-    if (runif(1) < exp(logaccprob)) {
-      accept_pbe("trans")
+    if(!is.na(exp(logaccprob))){
+      if (runif(1) < exp(logaccprob)) {
+        accept_pbe("trans")
+      }
     }
   }
   
@@ -915,8 +929,10 @@ update_host_phylotrans <- function(hostID, which_protocol) {
       logproposalratio
     
     ### accept or reject
-    if (runif(1) < exp(logaccprob)) {
-      accept_pbe("trans")
+    if(!is.na(exp(logaccprob))){
+      if (runif(1) < exp(logaccprob)) {
+        accept_pbe("trans")
+      }
     }
   }
   
