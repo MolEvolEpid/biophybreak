@@ -179,7 +179,7 @@ log.mean.prob <- function(logLik, values = 1:length(logLik)){
 #' @export
 #' 
 phybreak.plot.traces <- function(MCMCstate){
-  nInds <- length(MCMCstate$d$hostnames)
+  nInds <- length(unique(MCMCstate$d$hostnames))
   plot(MCMCstate$s$mu, type = 'l', ylab = "mu")
   plot(MCMCstate$s$wh.0, type = 'l', ylab = "Within Host Level")
   plot(MCMCstate$s$wh.s, type = 'l', ylab = "Within Host Slope")
