@@ -216,17 +216,17 @@ phybreak.plot.posteriors <- function(post_prob_df, treecolors = NULL, unsampled 
   }
   #label for y axis
   if(!is.null(post_prob_df$True.Infector)){
-    ggplot(data = post_prob_df, aes(x = Individual, y = Posterior.Support, fill = Infector, color = True.Infector)) + 
-      geom_bar(position = "dodge", stat = "identity", width = 0.8) + 
-      ylim(c(0,1)) + labs(...) + ylab(label = ylab) +
-      scale_fill_manual(values = c("#888888", treecolors)) +
-      scale_color_manual(values = c("#DDDDDD", "#000000")) +
-      theme_bw()
+    ggplot2::ggplot(data = post_prob_df, ggplot2::aes(x = Individual, y = Posterior.Support, fill = Infector, color = True.Infector)) + 
+      ggplot2::geom_bar(position = "dodge", stat = "identity", width = 0.8) + 
+      ggplot2::ylim(c(0,1)) + ggplot2::labs(...) + ggplot2::ylab(label = ylab) +
+      ggplot2::scale_fill_manual(values = c("#888888", treecolors)) +
+      ggplot2::scale_color_manual(values = c("#DDDDDD", "#000000")) +
+      ggplot2::theme_bw()
   } else{
-    ggplot(data = post_prob_df, aes(x = Individual, y = Posterior.Support, fill = Infector)) + 
-      geom_bar(position = "dodge", stat = "identity", width = 0.8) + 
-      ylim(c(0,1)) + labs(...) + ylab(label = ylab) +
-      scale_fill_manual(values = c("#888888", treecolors)) +
-      theme_bw()
+    ggplot2::ggplot(data = post_prob_df, ggplot2::aes(x = Individual, y = Posterior.Support, fill = Infector)) + 
+      ggplot2::geom_bar(position = "dodge", stat = "identity", width = 0.8) + 
+      ggplot2::ylim(c(0,1)) + ggplot2::labs(...) + ggplot2::ylab(label = ylab) +
+      ggplot2::scale_fill_manual(values = c("#888888", treecolors)) +
+      ggplot2::theme_bw()
   }
 }
