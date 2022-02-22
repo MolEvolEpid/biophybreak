@@ -83,7 +83,12 @@ sample_phybreak <- function(x, nsample, thin = 1, classic = 0, keepphylo = 0, wi
                    dist.e = c(x$s$dist.e, rep(NA, nsample)), 
                    dist.s = c(x$s$dist.s, rep(NA, nsample)), 
                    dist.m = c(x$s$dist.m, rep(NA, nsample)), 
-                   logLik = c(x$s$logLik, rep(NA, nsample)))
+                   logLik = c(x$s$logLik, rep(NA, nsample)), 
+                   logLikseq = c(x$s$logLikseq, rep(NA, nsample)), 
+                   logLiksam = c(x$s$logLiksam, rep(NA, nsample)), 
+                   logLikgen = c(x$s$logLikgen, rep(NA, nsample)), 
+                   logLikdist = c(x$s$logLikdist, rep(NA, nsample)), 
+                   logLikcoal = c(x$s$logLikcoal, rep(NA, nsample)))
     
     build_pbe(x)
 
