@@ -25,7 +25,9 @@ Imports:
     stats,
     stringr,
     utils,
-    sp
+    sp,
+    ggplot2,
+    ggtext
 Suggests:
     coda,
     phytools,

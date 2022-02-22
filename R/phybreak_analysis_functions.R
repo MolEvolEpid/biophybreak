@@ -178,19 +178,19 @@ log.mean.prob <- function(logLik, values = 1:length(logLik)){
 #' @param MCMCstate A phybreak object containing the information from the MCMC inference
 #' @export
 #' 
-phybreak.plot.traces <- function(MCMCstate){
+phybreak.plot.traces <- function(MCMCstate, main = ""){
   nInds <- length(unique(MCMCstate$d$hostnames))
-  plot(MCMCstate$s$mu, type = 'l', ylab = "mu")
-  plot(MCMCstate$s$wh.0, type = 'l', ylab = "Within Host Level")
-  plot(MCMCstate$s$wh.s, type = 'l', ylab = "Within Host Slope")
+  plot(MCMCstate$s$mu, type = 'l', ylab = "mu", main = main)
+  plot(MCMCstate$s$wh.0, type = 'l', ylab = "Within Host Level", main = main)
+  plot(MCMCstate$s$wh.s, type = 'l', ylab = "Within Host Slope", main = main)
   for(i in 1:nInds){
-    plot(MCMCstate$s$inftimes[i,], type = 'l', ylab = paste0("tinf.", MCMCstate$d$hostnames[i]))
+    plot(MCMCstate$s$inftimes[i,], type = 'l', ylab = paste0("tinf.", MCMCstate$d$hostnames[i]), main = main)
   }
   for(i in 1:nInds){
     plot(MCMCstate$s$infectors[i,], type = 'l', 
-         ylim = c(0, nInds), ylab = paste0("infector.", MCMCstate$d$hostnames[i]))
+         ylim = c(0, nInds), ylab = paste0("infector.", MCMCstate$d$hostnames[i]), main = main)
   }
-  plot(MCMCstate$s$logLik, type = 'l', ylab = "logLik")
+  plot(MCMCstate$s$logLik, type = 'l', ylab = "logLik", main = main)
 }
 
 #' @title Barplot of posterior supports for infectors
@@ -221,12 +221,14 @@ phybreak.plot.posteriors <- function(post_prob_df, treecolors = NULL, unsampled 
       ggplot2::ylim(c(0,1)) + ggplot2::labs(...) + ggplot2::ylab(label = ylab) +
       ggplot2::scale_fill_manual(values = c("#888888", treecolors)) +
       ggplot2::scale_color_manual(values = c("#DDDDDD", "#000000")) +
-      ggplot2::theme_bw()
+      ggplot2::theme_bw() +
+      ggplot2::theme(axis.text.x = ggtext::element_markdown(color = treecolors))
   } else{
     ggplot2::ggplot(data = post_prob_df, ggplot2::aes(x = Individual, y = Posterior.Support, fill = Infector)) + 
       ggplot2::geom_bar(position = "dodge", stat = "identity", width = 0.8) + 
       ggplot2::ylim(c(0,1)) + ggplot2::labs(...) + ggplot2::ylab(label = ylab) +
       ggplot2::scale_fill_manual(values = c("#888888", treecolors)) +
-      ggplot2::theme_bw()
+      ggplot2::theme_bw() +
+      ggplot2::theme(axis.text.x = ggtext::element_markdown(color = treecolors))
   }
 }
