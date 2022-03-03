@@ -182,14 +182,26 @@ phybreak <- function(dataset, times = NULL,
   
   #SNP count
   SNPpatterns <- do.call(rbind, dataslot$sequences)
-  dataslot$nSNPs <- as.integer(
-    sum(apply(SNPpatterns, 2, 
-              function(x) {
-                max(0, length(unique(x[x < 5])) - 1)
-              }
-              ) * attr(dataslot$sequences, "weight")
-        )
+  #TODO: proper way to account for using population sequences
+  #if(use.pml == TRUE){
+  #  dataslot$nSNPs <- as.integer(
+  #    sum(apply(SNPpatterns, 2, 
+  #              function(x) {
+  #                max(0, length(unique(x)) - 1)
+  #              }
+  #    ) * attr(dataslot$sequences, "weight")
+  #    )
+  #  )
+  #} else{
+    dataslot$nSNPs <- as.integer(
+      sum(apply(SNPpatterns, 2, 
+                function(x) {
+                  max(0, length(unique(x[x < 5])) - 1)
+                }
+      ) * attr(dataslot$sequences, "weight")
+      )
     )
+  #}
 
   #Sample size
   dataslot$nsamples <- length(dataslot$names)
