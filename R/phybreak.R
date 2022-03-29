@@ -147,13 +147,12 @@ phybreak <- function(dataset, times = NULL,
   ### parameter name compatibility with older versions ###
   ########################################################
   old_arguments <- list(...)
-  if(exists("oldarguments$prior.mean.gen.mean")) prior.gen.mean.mean <- oldarguments$prior.mean.gen.mean
-  if(exists("oldarguments$prior.mean.gen.sd")) prior.gen.mean.sd <- oldarguments$prior.mean.gen.sd
-  if(exists("oldarguments$prior.mean.sample.mean")) prior.sample.mean.mean <- oldarguments$prior.mean.sample.mean
-  if(exists("oldarguments$prior.mean.sample.sd")) prior.sample.mean.sd <- oldarguments$prior.mean.sample.sd
-  if(exists("oldarguments$prior.wh.shape")) prior.wh.slope.shape <- oldarguments$prior.wh.shape
-  if(exists("oldarguments$prior.wh.mean")) prior.wh.slope.mean <- oldarguments$prior.wh.mean
-  
+  if("prior.mean.gen.mean" %in% names(oldarguments)) prior.gen.mean.mean <- oldarguments$prior.mean.gen.mean
+  if("prior.mean.gen.sd" %in% names(oldarguments)) prior.gen.mean.sd <- oldarguments$prior.mean.gen.sd
+  if("prior.mean.sample.mean" %in% names(oldarguments)) prior.sample.mean.mean <- oldarguments$prior.mean.sample.mean
+  if("prior.mean.sample.sd" %in% names(oldarguments)) prior.sample.mean.sd <- oldarguments$prior.mean.sample.sd
+  if("prior.wh.shape" %in% names(oldarguments)) prior.wh.slope.shape <- oldarguments$prior.wh.shape
+  if("prior.wh.mean" %in% names(oldarguments)) prior.wh.slope.mean <- oldarguments$prior.wh.mean
   
   ###########################################
   ### check for correct classes and sizes ###
@@ -334,6 +333,7 @@ phybreak <- function(dataset, times = NULL,
     sample.shape = sample.shape,
     gen.shape = gen.shape,
     sample.nonpar = sample.nonpar,
+    sample.pdf.nonpar = sample.density,
     sample.pdf = sample.pdf,
     sample.cdf = sample.cdf,
     sample.icdf = sample.icdf,
