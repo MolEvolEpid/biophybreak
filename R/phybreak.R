@@ -146,7 +146,7 @@ phybreak <- function(dataset, times = NULL,
   ########################################################
   ### parameter name compatibility with older versions ###
   ########################################################
-  old_arguments <- list(...)
+  oldarguments <- list(...)
   if("prior.mean.gen.mean" %in% names(oldarguments)) prior.gen.mean.mean <- oldarguments$prior.mean.gen.mean
   if("prior.mean.gen.sd" %in% names(oldarguments)) prior.gen.mean.sd <- oldarguments$prior.mean.gen.sd
   if("prior.mean.sample.mean" %in% names(oldarguments)) prior.sample.mean.mean <- oldarguments$prior.mean.sample.mean
