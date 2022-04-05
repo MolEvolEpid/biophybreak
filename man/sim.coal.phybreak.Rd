@@ -16,6 +16,8 @@ sim.coal.phybreak(
   tr_window = rep(Inf, dim(tt)[1]),
   mut_model = "env",
   user_seqs = NULL,
+  user_seq_hosts = NULL,
+  user_seq_names = NULL,
   sim_index = 1,
   tree_loc = "",
   seed = sample(2e+09, 1)
@@ -67,7 +69,7 @@ Has no effect for the index case.}
 \item{mut_model}{The mutation model to be used if seq-gen is used for sequences, 
 which can be "env" or "pol" for the HIV-1 envelope or polymerase genes}
 
-\item{user_seqs}{User provided sequences to be used if seq-gen is not used}
+\item{user_seqs}{User provided sequences to be used if seq-gen is not used, in order of sampling time}
 
 \item{sim_index}{The name of the tree for saving files.}
 

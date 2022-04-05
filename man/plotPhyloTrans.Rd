@@ -34,6 +34,7 @@ plotPhyloTrans(
   cpoint.pch = 20,
   cpoint.cex = 1,
   cpoint.col = tree.col,
+  xlim.adjust = NULL,
   xlab = "Time",
   axis.cex = 1,
   title.cex = 1,
@@ -120,6 +121,10 @@ both at the tips and roots of the phylogenetic trees.}
 
 \item{cpoint.col}{Colour of points indicating the transmission contacts, associated with the secondary case,
 both at the tips and roots of the phylogenetic trees. Defaults to same as tree colours.}
+
+\item{xlim.adjust}{Potential adjustments to the limits of the x axis. If xlim.adjust[1] is larger than the
+default minimum and xlim.adjust[2] is smaller than the default maximum, then this parameter has no effect.
+Otherwise, the smaller min/larger max will be used.}
 
 \item{xlab}{X-axis title.}
 

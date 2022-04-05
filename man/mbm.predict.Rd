@@ -10,7 +10,7 @@ mbm.predict(
   CD4,
   pol,
   pol2 = rep(NA, length(CD4)),
-  prev.neg.time = rep(Inf, length(CD4)),
+  prev.neg.time = NULL,
   t.sam.delay = rep(0, length(CD4)),
   t.CD4.delay = rep(0, length(CD4)),
   mub,

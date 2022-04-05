@@ -8,6 +8,7 @@ phybreak.plot.posteriors(
   post_prob_df,
   treecolors = NULL,
   unsampled = NULL,
+  xlab = "Recipient",
   ylab = "Posterior Support",
   ...
 )
@@ -18,6 +19,8 @@ phybreak.plot.posteriors(
 \item{treecolors}{Colors for each individual}
 
 \item{unsampled}{Indices of individuals that were not considered sampled during inference if using simulated data}
+
+\item{xlab}{Label of the x axis}
 
 \item{ylab}{Label of the y axis
 ... Other parameters that can be passed to ggplot::labs}

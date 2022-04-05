@@ -198,11 +198,13 @@ phybreak.plot.traces <- function(MCMCstate, main = ""){
 #' @param post_prob_df A dataframe from either the phybreak.accuracy or phybreak.infector.posts function
 #' @param treecolors Colors for each individual
 #' @param unsampled Indices of individuals that were not considered sampled during inference if using simulated data
+#' @param xlab Label of the x axis
 #' @param ylab Label of the y axis
 #' ... Other parameters that can be passed to ggplot::labs
 #' @export
 #' 
-phybreak.plot.posteriors <- function(post_prob_df, treecolors = NULL, unsampled = NULL, ylab = "Posterior Support", ...){
+phybreak.plot.posteriors <- function(post_prob_df, treecolors = NULL, unsampled = NULL, 
+                                     xlab = "Recipient", ylab = "Posterior Support", ...){
   if(is.null(treecolors)){
     #number of sampled and unsampled individuals (if any)
     nInd <- length(levels(post_prob_df$Individual)) + length(unsampled)
@@ -218,17 +220,95 @@ phybreak.plot.posteriors <- function(post_prob_df, treecolors = NULL, unsampled 
   if(!is.null(post_prob_df$True.Infector)){
     ggplot2::ggplot(data = post_prob_df, ggplot2::aes(x = Individual, y = Posterior.Support, fill = Infector, color = True.Infector)) + 
       ggplot2::geom_bar(position = "dodge", stat = "identity", width = 0.8) + 
-      ggplot2::ylim(c(0,1)) + ggplot2::labs(...) + ggplot2::ylab(label = ylab) +
+      ggplot2::ylim(c(0,1)) + ggplot2::labs(...) + ggplot2::xlab(label = xlab) + ggplot2::ylab(label = ylab) +
       ggplot2::scale_fill_manual(values = c("#888888", treecolors)) +
       ggplot2::scale_color_manual(values = c("#DDDDDD", "#000000")) +
       ggplot2::theme_bw() +
-      ggplot2::theme(axis.text.x = ggtext::element_markdown(color = treecolors))
+      ggplot2::theme(axis.text.x = ggtext::element_markdown(color = treecolors, angle = 90))
   } else{
     ggplot2::ggplot(data = post_prob_df, ggplot2::aes(x = Individual, y = Posterior.Support, fill = Infector)) + 
       ggplot2::geom_bar(position = "dodge", stat = "identity", width = 0.8) + 
-      ggplot2::ylim(c(0,1)) + ggplot2::labs(...) + ggplot2::ylab(label = ylab) +
+      ggplot2::ylim(c(0,1)) + ggplot2::labs(...) + ggplot2::xlab(label = xlab) + ggplot2::ylab(label = ylab) +
       ggplot2::scale_fill_manual(values = c("#888888", treecolors)) +
       ggplot2::theme_bw() +
-      ggplot2::theme(axis.text.x = ggtext::element_markdown(color = treecolors))
+      ggplot2::theme(axis.text.x = ggtext::element_markdown(color = treecolors, angle = 90))
   }
+}
+
+#' @title Plot MPC tree, infection age distributions, and infector posterior supports
+#' @description Function to plot the maximum parent credibility tree, infection age distributions, 
+#'   and posterior supports for infectors in one page
+#' @param MCMCstate The output from sample_phybreak
+#' @export
+#' 
+phybreak.plot.triple <- function(MCMCstate){
+  #number of individuals
+  nInd <- length(unique(MCMCstate$d$hostnames))
+  #find xmin appropriate from biomarker distributions
+  time_min.1 <- mapply(MCMCstate$p$sample.pdf.nonpar, FUN = function(pdf.nonpar, sample.time){
+    x <- rev(-pdf.nonpar$x) + sample.time
+    y <- rev(pdf.nonpar$y)
+    cdf <- find_cdf(x, y)
+    #plot(x, y, type = 'l')
+    #lines(x, cdf, type = 'l', lty = 2)
+    min.eff <- min(x[cdf >= 0.1])
+  }, sample.time = MCMCstate$d$sample.times[1:nInd])
+  
+  time_min.1.all <- min(time_min.1)
+  
+  #pdf(file = "3_test_margins.pdf", width = 5, height = 10)
+  layout(matrix(1:3, nrow = 3))
+  #plot MPC tree
+  plotPhyloTrans(MCMCstate, plot.which = "mpc", 
+                 xlim.adjust = c(time_min.1.all, 0),
+                 xlab = "", mar = c(2,3.85,0,.2))
+  #plot infection times
+  treecolors <- hcl(unlist(sapply(1:floor(sqrt(nInd)) - 1, 
+                                  function(xx) seq(xx, nInd - 1, 
+                                                   floor(sqrt(nInd))))) * 360/nInd, 
+                    c = 100, l = 65)
+  xlims <- par("usr")[1:2]
+  xmid <- mean(xlims)
+  new_xlims <- (xlims-xmid)*.926+xmid
+  new_xlims[2] <- diff(new_xlims) + new_xlims[1]
+  ymax <- max(sapply(MCMCstate$p$sample.pdf.nonpar, FUN = function(dens){max(dens$y)}))
+  par(mar = c(3, 2.6, 1, .2), mgp = c(1.5, 0.5, 0))
+  plot(-MCMCstate$p$sample.pdf.nonpar[[1]]$x + MCMCstate$d$sample.times[1], 
+       MCMCstate$p$sample.pdf.nonpar[[1]]$y, 
+       type = 'l', col = treecolors[1], 
+       xlim = new_xlims, 
+       ylim = c(0, ymax),
+       #main = paste0("Cluster "), 
+       xlab = "Time (years after first diagnosis)", ylab = "Density",
+       axes = FALSE)
+  axis(1)
+  axis(2)
+  box(bty = 'l')
+  for(j in 2:nInd){
+    lines(-MCMCstate$p$sample.pdf.nonpar[[j]]$x + MCMCstate$d$sample.times[j], 
+          MCMCstate$p$sample.pdf.nonpar[[j]]$y,
+          type = 'l', col = treecolors[j])
+  }
+  #plot infector posterior densities
+  plot.new()
+  vps <- gridBase::baseViewports()
+  grid::pushViewport(vps$figure)
+  vp1 <-grid::plotViewport(c(0,0,0,0))
+  posterior_dens <- phybreak.plot.posteriors(phybreak.infector.posts(MCMCstate)$post_prob_df, 
+                                             ylab = "Infector Posterior Support")
+  print(posterior_dens, vp = vp1)
+  grid::popViewport()
+}
+
+#get the cdf from the pdf for the infection age distribution
+find_cdf <- function(x,y){
+  #unnormalized pdf
+  cdf_unnorm <- numeric(length = length(x))
+  cdf_unnorm[1] <- 0
+  x_diffs <- diff(x)
+  for(i in 2:length(x)){ 
+    cdf_unnorm[i] <- cdf_unnorm[i-1] + mean(y[i],y[i-1])*x_diffs[i-1] #linear approximation integral
+  }
+  cdf_norm <- cdf_unnorm/max(cdf_unnorm)
+  return(cdf_norm)
 }
