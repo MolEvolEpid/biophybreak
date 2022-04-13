@@ -10,6 +10,7 @@ phybreak.plot.posteriors(
   unsampled = NULL,
   xlab = "Recipient",
   ylab = "Posterior Support",
+  angle = 90,
   ...
 )
 }
@@ -22,7 +23,9 @@ phybreak.plot.posteriors(
 
 \item{xlab}{Label of the x axis}
 
-\item{ylab}{Label of the y axis
+\item{ylab}{Label of the y axis}
+
+\item{angle}{Angle of x-axis labels
 ... Other parameters that can be passed to ggplot::labs}
 }
 \description{

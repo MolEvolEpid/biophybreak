@@ -200,11 +200,13 @@ phybreak.plot.traces <- function(MCMCstate, main = ""){
 #' @param unsampled Indices of individuals that were not considered sampled during inference if using simulated data
 #' @param xlab Label of the x axis
 #' @param ylab Label of the y axis
+#' @param angle Angle of x-axis labels
 #' ... Other parameters that can be passed to ggplot::labs
 #' @export
 #' 
 phybreak.plot.posteriors <- function(post_prob_df, treecolors = NULL, unsampled = NULL, 
-                                     xlab = "Recipient", ylab = "Posterior Support", ...){
+                                     xlab = "Recipient", ylab = "Posterior Support", 
+                                     angle = 90, ...){
   if(is.null(treecolors)){
     #number of sampled and unsampled individuals (if any)
     nInd <- length(levels(post_prob_df$Individual)) + length(unsampled)
@@ -224,14 +226,14 @@ phybreak.plot.posteriors <- function(post_prob_df, treecolors = NULL, unsampled 
       ggplot2::scale_fill_manual(values = c("#888888", treecolors)) +
       ggplot2::scale_color_manual(values = c("#DDDDDD", "#000000")) +
       ggplot2::theme_bw() +
-      ggplot2::theme(axis.text.x = ggtext::element_markdown(color = treecolors, angle = 90))
+      ggplot2::theme(axis.text.x = ggtext::element_markdown(color = treecolors, angle = angle))
   } else{
     ggplot2::ggplot(data = post_prob_df, ggplot2::aes(x = Individual, y = Posterior.Support, fill = Infector)) + 
       ggplot2::geom_bar(position = "dodge", stat = "identity", width = 0.8) + 
       ggplot2::ylim(c(0,1)) + ggplot2::labs(...) + ggplot2::xlab(label = xlab) + ggplot2::ylab(label = ylab) +
       ggplot2::scale_fill_manual(values = c("#888888", treecolors)) +
       ggplot2::theme_bw() +
-      ggplot2::theme(axis.text.x = ggtext::element_markdown(color = treecolors, angle = 90))
+      ggplot2::theme(axis.text.x = ggtext::element_markdown(color = treecolors, angle = angle))
   }
 }
 
@@ -239,9 +241,12 @@ phybreak.plot.posteriors <- function(post_prob_df, treecolors = NULL, unsampled 
 #' @description Function to plot the maximum parent credibility tree, infection age distributions, 
 #'   and posterior supports for infectors in one page
 #' @param MCMCstate The output from sample_phybreak
+#' @param phybreak.true The true transmission history (if using simulated data)
+#' @param angle Angle of x-axis labels in the infector posterior density plot
 #' @export
 #' 
-phybreak.plot.triple <- function(MCMCstate){
+phybreak.plot.triple <- function(MCMCstate, phybreak.true = NULL,
+                                 angle = 90){
   #number of individuals
   nInd <- length(unique(MCMCstate$d$hostnames))
   #find xmin appropriate from biomarker distributions
@@ -289,13 +294,23 @@ phybreak.plot.triple <- function(MCMCstate){
           MCMCstate$p$sample.pdf.nonpar[[j]]$y,
           type = 'l', col = treecolors[j])
   }
+  if(class(phybreak.true) == "phybreakdata"){
+    #plot true infection ages
+    abline(v = phybreak.true$sim.infection.times, col = treecolors, lty = 2)
+  }
   #plot infector posterior densities
+  #find posteriors
+  if(class(phybreak.true) == "phybreakdata"){
+    post_prob_df <- phybreak.accuracy(phybreak.true = phybreak.true, MCMCstate = MCMCstate)$post_prob_df
+  } else{
+    post_prob_df <- phybreak.infector.posts(MCMCstate)$post_prob_df
+  }
   plot.new()
   vps <- gridBase::baseViewports()
   grid::pushViewport(vps$figure)
   vp1 <-grid::plotViewport(c(0,0,0,0))
-  posterior_dens <- phybreak.plot.posteriors(phybreak.infector.posts(MCMCstate)$post_prob_df, 
-                                             ylab = "Infector Posterior Support")
+  posterior_dens <- phybreak.plot.posteriors(post_prob_df, 
+                                             ylab = "Infector Posterior Support", angle = angle)
   print(posterior_dens, vp = vp1)
   grid::popViewport()
 }

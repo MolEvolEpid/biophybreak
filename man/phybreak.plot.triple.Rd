@@ -4,10 +4,14 @@
 \alias{phybreak.plot.triple}
 \title{Plot MPC tree, infection age distributions, and infector posterior supports}
 \usage{
-phybreak.plot.triple(MCMCstate)
+phybreak.plot.triple(MCMCstate, phybreak.true = NULL, angle = 90)
 }
 \arguments{
 \item{MCMCstate}{The output from sample_phybreak}
+
+\item{phybreak.true}{The true transmission history (if using simulated data)}
+
+\item{angle}{Angle of x-axis labels in the infector posterior density plot}
 }
 \description{
 Function to plot the maximum parent credibility tree, infection age distributions, 
