@@ -262,7 +262,15 @@ sim.coal.phybreak <- function(tt,
     host_index[i] <- which(hosts[i] == tt$names)
   }
   
-  sample.times <- tt$t_sam[host_index]
+  if(is.list(sample.times)){
+    sample.times.vec <- numeric(length = length(unlist(sample.times)))
+    for(i in 1:length(sample.times)){
+      sample.times.vec[which(host_index == i)] <- sample.times[[i]]
+    }
+    sample.times <- sample.times.vec
+  } else{
+    sample.times <- tt$t_sam[host_index]
+  }
   host.names <- hosts
   #sim.infection.times <- tt$t_inf
   #sim.infectors <- tt$donor
