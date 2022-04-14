@@ -57,6 +57,9 @@ phybreak.accuracy <- function(phybreak.true, MCMCstate, complete = TRUE){
   nIters <- length(MCMCstate$s$infectors[1,])
   post_support <- post_counts/nIters #normalize by number of samples to get percentage support
   
+  #mean of the maximum posterior probability infector for each individual
+  mean_max_post <- mean(apply(post_support, 2, max))
+  
   for(j in 1:length(true_infectors)){
     corr_infect[j] <- rownames(post_counts)[which.max(post_counts[,j])] == true_infectors[j] #is max post infector true infector?
     post_true_each[j] <- post_support[true_infectors[j], j] #posterior support for true infector
@@ -97,7 +100,7 @@ phybreak.accuracy <- function(phybreak.true, MCMCstate, complete = TRUE){
   post_prob_df <- post_prob_df[order(post_prob_df$Individual, post_prob_df$Infector),]
   if(isTRUE(complete)){
     return(list(post_support = post_support, 
-                accuracy = accuracy, mean_enrich = mean_enrich, mean_post = mean_post,
+                accuracy = accuracy, mean_enrich = mean_enrich, mean_post = mean_post, mean_max_post = mean_max_post,
                 corr_infect = corr_infect, post_true = post_true_each,
                 true_infectors = true_infectors,
                 post_prob_df = post_prob_df))
@@ -105,7 +108,7 @@ phybreak.accuracy <- function(phybreak.true, MCMCstate, complete = TRUE){
     return(list(post_support = post_support, 
                 accuracy = accuracy, accuracy_unsampled_infector = accuracy_unsampled_infector, 
                 mean_enrich = mean_enrich, mean_enrich_unsampled_infector = mean_enrich_unsampled_infector,
-                mean_post = mean_post, mean_post_unsampled_infector = mean_post_unsampled_infector, 
+                mean_post = mean_post, mean_post_unsampled_infector = mean_post_unsampled_infector, mean_max_post = mean_max_post,
                 corr_infect = corr_infect, post_true = post_true_each,
                 true_infectors = true_infectors,
                 post_prob_df = post_prob_df))
