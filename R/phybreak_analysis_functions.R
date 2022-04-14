@@ -137,6 +137,9 @@ phybreak.infector.posts <- function(MCMCstate){
   nIters <- length(MCMCstate$s$infectors[1,])
   post_support <- post_counts/nIters #normalize by number of samples to get percentage support
   
+  #mean of the maximum posterior probability infector for each individual
+  mean_max_post <- mean(apply(post_support, 2, max))
+  
   post_prob_df <- as.data.frame(t(post_support), stringsAsFactors = TRUE)
   post_prob_df$Individual <- rownames(post_prob_df)
   post_prob_df <- reshape2::melt(post_prob_df, id = "Individual")
@@ -148,7 +151,9 @@ phybreak.infector.posts <- function(MCMCstate){
   
   post_prob_df <- post_prob_df[order(post_prob_df$Individual, post_prob_df$Infector),]
   
-  return(list(post_support = post_support, post_prob_df = post_prob_df))
+  return(list(post_support = post_support, 
+              mean_max_post = mean_max_post,
+              post_prob_df = post_prob_df))
 }
 
 #' @title Find phybreak posterior probabilities
