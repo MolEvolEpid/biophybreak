@@ -27,7 +27,8 @@ Imports:
     utils,
     sp,
     ggplot2,
-    ggtext
+    ggtext,
+    reshape2
 Suggests:
     coda,
     phytools,

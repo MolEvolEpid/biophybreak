@@ -159,6 +159,21 @@ phybreak.infector.posts <- function(MCMCstate){
               post_prob_df = post_prob_df))
 }
 
+#' @title Find MPC infectors
+#' @description Function to find the maximum parent credibility infectors from a phybreak object
+#' @param MCMCstate A phybreak object containing the information from the MCMC inference
+#' @return The names and indices of the MPC infectors for each individual
+#' @export
+mpcinfectors <- function(MCMCstate){
+  samplenr <- .mpcinfector(MCMCstate, length(MCMCstate$s$logLik), TRUE, FALSE)
+  mpcinfectors <- MCMCstate$s$infectors[,samplenr]
+  nInd <- length(mpcinfectors)
+  infectornames <- c("index", MCMCstate$d$hostnames[1:nInd])
+  infectors <- infectornames[mpcinfectors+1] #+1 is to account for index
+  names(infectors) <- MCMCstate$d$hostnames[1:nInd]
+  return(list(names = infectors, indices = mpcinfectors))
+}
+
 #' @title Find phybreak posterior probabilities
 #' @description Function to compute the posterior probabilities for each MCMC iteration
 #' @param MCMCstate A phybreak object containing the information from the MCMC inference
