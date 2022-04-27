@@ -10,7 +10,7 @@ mpcinfectors(MCMCstate)
 \item{MCMCstate}{A phybreak object containing the information from the MCMC inference}
 }
 \value{
-The names and indices of the MPC infectors for each individual
+The names and indices of the MPC infectors for each individual and the transmission heterogeneity
 }
 \description{
 Function to find the maximum parent credibility infectors from a phybreak object

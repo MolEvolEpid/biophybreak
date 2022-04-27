@@ -166,7 +166,7 @@ phybreak.infector.posts <- function(MCMCstate){
 #' @title Find MPC infectors
 #' @description Function to find the maximum parent credibility infectors from a phybreak object
 #' @param MCMCstate A phybreak object containing the information from the MCMC inference
-#' @return The names and indices of the MPC infectors for each individual
+#' @return The names and indices of the MPC infectors for each individual and the transmission heterogeneity
 #' @export
 mpcinfectors <- function(MCMCstate){
   samplenr <- .mpcinfector(MCMCstate, length(MCMCstate$s$logLik), TRUE, FALSE)
@@ -175,7 +175,10 @@ mpcinfectors <- function(MCMCstate){
   infectornames <- c("index", MCMCstate$d$hostnames[1:nInd])
   infectors <- infectornames[mpcinfectors+1] #+1 is to account for index
   names(infectors) <- MCMCstate$d$hostnames[1:nInd]
-  return(list(names = infectors, indices = mpcinfectors))
+  #find transmission heterogeneity
+  #(sorted and removed lowest number of transmissions since it must be 0)
+  heterogeneity <- sd(sort(tabulate(mpcinfectors, nbins = length(mpcinfectors)))[-1]) #sorted and removed lowest number of transmissions
+  return(list(names = infectors, indices = mpcinfectors, heterogeneity = heterogeneity))
 }
 
 #' @title Find phybreak posterior probabilities
