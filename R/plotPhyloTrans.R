@@ -58,6 +58,7 @@
 #' @param xlim.adjust Potential adjustments to the limits of the x axis. If xlim.adjust[1] is larger than the
 #'   default minimum and xlim.adjust[2] is smaller than the default maximum, then this parameter has no effect.
 #'   Otherwise, the smaller min/larger max will be used.
+#' @param xlim.override Overrides the automatic or adjusted x limits
 #' @param xlab X-axis title.
 #' @param axis.cex Size of tick labels.
 #' @param title.cex Size of X-axis title.
@@ -98,6 +99,7 @@ plotPhyloTrans <- function(x, plot.which = c("sample", "mpc", "mtcc", "mcc"), sa
                            cline.lty = 3, cline.lwd = 1, cline.col = "black", 
                            cpoint.pch = 20, cpoint.cex = 1, cpoint.col = tree.col, 
                            xlim.adjust = NULL,
+                           xlim.override = NULL,
                            xlab = "Time", axis.cex = 1, title.cex = 1, ...) {
   ### tests ###
   if(!("phytools" %in% .packages(TRUE))) {
@@ -180,6 +182,7 @@ plotPhyloTrans <- function(x, plot.which = c("sample", "mpc", "mtcc", "mcc"), sa
                      cline.lty = cline.lty, cline.lwd = cline.lwd, cline.col = cline.col, 
                      cpoint.pch = cpoint.pch, cpoint.cex = cpoint.cex, cpoint.col = cpoint.col, 
                      xlim.adjust = xlim.adjust,
+                     xlim.override = xlim.override,
                      xlab = xlab, axis.cex = axis.cex, title.cex = title.cex, ...)
 }
 
@@ -198,6 +201,7 @@ makephylotransplot <- function(plotinput, select.how = "trees", select.who = "in
                                cline.lty = 3, cline.lwd = 1, cline.col = "black", 
                                cpoint.pch = 20, cpoint.cex = 1, cpoint.col = tree.col, 
                                xlim.adjust = NULL,
+                               xlim.override = NULL,
                                xlab = "Time", axis.cex = 1, title.cex = 1, ...) {
   oldmar <- par("mar")
   par(mar = mar)
@@ -576,7 +580,11 @@ makephylotransplot <- function(plotinput, select.how = "trees", select.who = "in
   plot.new()
   par(cex = 1)
   if(hostlabel || samplelabel) {
-    if(!is.null(xlim.adjust)){
+    if(!is.null(xlim.override)){
+      xmin <- xlim.override[1]
+      xmax <- xlim.override[2]
+      xlim <- c(xmin, xmax)
+    } else if(!is.null(xlim.adjust)){
       xmin <- min(xlim.adjust[1], tmin)
       xmax <- max(xlim.adjust[2], tmax + label.space * hostlabel.cex * (tmax - tmin))
       xlim <- c(xmin, xmax)
@@ -586,7 +594,11 @@ makephylotransplot <- function(plotinput, select.how = "trees", select.who = "in
     plot.window(xlim = xlim, 
                 ylim = c(0, max(yphylo2)))
   } else {
-    if(!is.null(xlim.adjust)){
+    if(!is.null(xlim.override)){
+      xmin <- xlim.override[1]
+      xmax <- xlim.override[2]
+      xlim <- c(xmin, xmax)
+    } else if(!is.null(xlim.adjust)){
       xmin <- min(xlim.adjust[1], tmin)
       xmax <- max(xlim.adjust[2], tmax)
       xlim <- c(xmin, xmax)

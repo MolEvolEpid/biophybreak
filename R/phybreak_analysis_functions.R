@@ -231,7 +231,7 @@ phybreak.plot.traces <- function(MCMCstate, main = ""){
 #' @param xlab Label of the x axis
 #' @param ylab Label of the y axis
 #' @param angle Angle of x-axis labels
-#' ... Other parameters that can be passed to ggplot::labs
+#' @param ... Other parameters that can be passed to ggplot::labs
 #' @export
 #' 
 phybreak.plot.posteriors <- function(post_prob_df, treecolors = NULL, unsampled = NULL, 
@@ -273,10 +273,11 @@ phybreak.plot.posteriors <- function(post_prob_df, treecolors = NULL, unsampled 
 #' @param MCMCstate The output from sample_phybreak
 #' @param phybreak.true The true transmission history (if using simulated data)
 #' @param angle Angle of x-axis labels in the infector posterior density plot
+#' @param ... Other parameters that can be passed to ggplot::labs
 #' @export
 #' 
 phybreak.plot.triple <- function(MCMCstate, phybreak.true = NULL,
-                                 angle = 90){
+                                 angle = 90, ...){
   #number of individuals
   nInd <- length(unique(MCMCstate$d$hostnames))
   #find xmin appropriate from biomarker distributions
@@ -291,21 +292,32 @@ phybreak.plot.triple <- function(MCMCstate, phybreak.true = NULL,
   
   time_min.1.all <- min(time_min.1)
   
-  #pdf(file = "3_test_margins.pdf", width = 5, height = 10)
-  layout(matrix(1:3, nrow = 3))
+  if(class(phybreak.true) != "phybreakdata"){
+    layout(matrix(1:3, nrow = 3))
+  } else{
+    layout(matrix(c(2,1,3,4), nrow = 4))
+  }
+  
   #plot MPC tree
   plotPhyloTrans(MCMCstate, plot.which = "mpc", 
                  xlim.adjust = c(time_min.1.all, 0),
                  xlab = "", mar = c(2,3.85,0,.2))
+  #find x limits
+  xlims <- par("usr")[1:2]
+  xmid <- mean(xlims)
+  new_xlims <- (xlims-xmid)*.926+xmid
+  new_xlims[2] <- diff(new_xlims) + new_xlims[1]
+  #plot true transmission history if it is known
+  if(class(phybreak.true) == "phybreakdata"){
+    plotPhyloTrans(phybreak.true, 
+                   xlim.override = new_xlims, #may not work great if true infection times are older than predicted ones
+                   xlab = "", mar = c(2,2.55,0,.2))
+  }
   #plot infection times
   treecolors <- hcl(unlist(sapply(1:floor(sqrt(nInd)) - 1, 
                                   function(xx) seq(xx, nInd - 1, 
                                                    floor(sqrt(nInd))))) * 360/nInd, 
                     c = 100, l = 65)
-  xlims <- par("usr")[1:2]
-  xmid <- mean(xlims)
-  new_xlims <- (xlims-xmid)*.926+xmid
-  new_xlims[2] <- diff(new_xlims) + new_xlims[1]
   ymax <- max(sapply(MCMCstate$p$sample.pdf.nonpar, FUN = function(dens){max(dens$y)}))
   par(mar = c(3, 2.6, 1, .2), mgp = c(1.5, 0.5, 0))
   plot(-MCMCstate$p$sample.pdf.nonpar[[1]]$x + MCMCstate$d$sample.times[1], 

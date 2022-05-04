@@ -25,8 +25,9 @@ phybreak.plot.posteriors(
 
 \item{ylab}{Label of the y axis}
 
-\item{angle}{Angle of x-axis labels
-... Other parameters that can be passed to ggplot::labs}
+\item{angle}{Angle of x-axis labels}
+
+\item{...}{Other parameters that can be passed to ggplot::labs}
 }
 \description{
 Function to create a barplot of the posterior supports for each infector
