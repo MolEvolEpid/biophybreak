@@ -352,7 +352,7 @@ phybreak.plot.triple <- function(MCMCstate, phybreak.true = NULL,
   grid::pushViewport(vps$figure)
   vp1 <-grid::plotViewport(c(0,0,0,0))
   posterior_dens <- phybreak.plot.posteriors(post_prob_df, 
-                                             ylab = "Infector Posterior Support", angle = angle)
+                                             ylab = "Infector Posterior Support", angle = angle, ...)
   print(posterior_dens, vp = vp1)
   grid::popViewport()
 }
