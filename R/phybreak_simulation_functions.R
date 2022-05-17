@@ -198,18 +198,20 @@ sim.coal.phybreak <- function(tt,
   }
   
   #call sim.coal.tree.R to make the phylogenetic tree
-  tree <- sim.coal.tree(tt = tt,
-                        a = a, b = b, 
-                        rhoD = rhoD, rhoR = rhoR,
-                        nSamples = nSamples, 
-                        sample.times = sample.times,
-                        gen.rate = gen.rate,
-                        tr_window = tr_window,
-                        file_path = tree_loc,
-                        tree_name = sim_index,
-                        save_tree = FALSE,
-                        plot_tree = FALSE,
-                        seed = seed)[1]
+  treeAndTips <- sim.coal.tree(tt = tt,
+                               a = a, b = b, 
+                               rhoD = rhoD, rhoR = rhoR,
+                               nSamples = nSamples, 
+                               sample.times = sample.times,
+                               gen.rate = gen.rate,
+                               tr_window = tr_window,
+                               file_path = tree_loc,
+                               tree_name = sim_index,
+                               save_tree = FALSE,
+                               plot_tree = FALSE,
+                               seed = seed)
+  tree <- treeAndTips[1]
+  sample.names.tips <- simplify2array(strsplit(treeAndTips[2:length(treeAndTips)], split = " "))[1,]
   
   if(is.null(user_seqs)){
     #make sequences with seq-gen if none are provided
@@ -238,13 +240,13 @@ sim.coal.phybreak <- function(tt,
     seqs <- seqs[-1,]
     sequences <- tolower(t(simplify2array(strsplit(seqs[,2], split = ""))))
     hosts <- simplify2array(strsplit(seqs[,1], split = "_"))[1,]
-    sample.names <- seqs[,1]
+    sample.names.seq <- seqs[,1]
   } else{
     #use provided sequences
     sequences <- user_seqs
     hosts <- user_seq_hosts
     #name samples
-    sample.names <- user_seq_names
+    sample.names.seq <- user_seq_names
     #unique.hosts <- unique(hosts)
     #nsamples_total <- 0
     #for(i in unique.hosts){
@@ -263,11 +265,12 @@ sim.coal.phybreak <- function(tt,
   }
   
   if(is.list(sample.times)){
-    sample.times.vec <- numeric(length = length(unlist(sample.times)))
-    for(i in 1:length(sample.times)){
-      sample.times.vec[which(host_index == i)] <- sample.times[[i]]
+    sample.times.unlist <- unlist(sample.times)
+    sample.times.reorder <- numeric(length = length(sample.times.unlist))
+    for(i in 1:length(sample.times.unlist)){
+      sample.times.reorder[i] <- sample.times.unlist[which(sample.names.tips == sample.names.seq[i])]
     }
-    sample.times <- sample.times.vec
+    sample.times <- sample.times.reorder
   } else{
     sample.times <- tt$t_sam[host_index]
   }
@@ -294,7 +297,7 @@ sim.coal.phybreak <- function(tt,
   outputordersamples <- order(!allfirsttimes, match(host.names, orderedhosts), sample.times)
   sequences <- sequences[outputordersamples, ]
   sample.times <- sample.times[outputordersamples]
-  sample.names <- sample.names[outputordersamples]
+  sample.names.seq <- sample.names.seq[outputordersamples]
   host.names <- host.names[outputordersamples]
   
   new.order <- integer(length = nInd)
@@ -310,13 +313,9 @@ sim.coal.phybreak <- function(tt,
     }
   }
   
-  #if(!is.null(user_seqs)){
-  #  sequences <- seqs
-  #}
-  
   sim_data <- phybreakdata(sequences = sequences, 
                            sample.times = sample.times, 
-                           sample.names = sample.names, 
+                           sample.names = sample.names.seq, 
                            host.names = host.names,
                            sim.infection.times = tt$t_inf,
                            sim.infectors = tt$donor, 
@@ -610,8 +609,6 @@ sim.coal.tree <- function(tt = NULL,
     
     #time when a new sample is taken #i think there is a simpler way to do this
     for(j in 1:nInd){
-      #print(t[i])
-      #print(sample.times[[j]])
       if(any(t[i] > sample.times[[j]])){
         #is this after (forwards time) any samples have been taken from patient j?
         t_sam_diff <- t[i] - sample.times[[j]] #find difference between current time and sample times
@@ -865,7 +862,7 @@ subsam.seqs <- function(sim_data, nseq_sub){
   #number of individuals
   nInds <- length(sim_data$sim.infection.times)
   #new number of sequences
-  host_names <- unique(sim_data$sample.hosts)
+  host.names <- unique(sim_data$sample.hosts)
   
   #make sure nseq_sub is the correct length
   if(length(nseq_sub) == 1){
@@ -878,17 +875,41 @@ subsam.seqs <- function(sim_data, nseq_sub){
   sub_indices <- c()
   
   for(i in 1:nInds){
-    sub_indices <- c(sub_indices, which(sim_data$sample.hosts == host_names[i])[1:nseq_sub[i]])
+    #subsample specific sequences if nsub_seq is given as a list
+    if(is.list(nseq_sub)){
+      sub_indices <- c(sub_indices, which(sim_data$sample.hosts == host.names[i])[nseq_sub[[i]]])
+    } else{
+      sub_indices <- c(sub_indices, which(sim_data$sample.hosts == host.names[i])[1:nseq_sub[i]])
+    }
   }
   sub_indices <- sort(sub_indices)
   
-  #copy phybreak object for subsampled version
-  sim_data_sub <- sim_data
+  sequences <- sim_data$sequences[sub_indices]
+  sample.times <- sim_data$sample.times[sub_indices]
+  sample.hosts <- sim_data$sample.hosts[sub_indices]
+  sample.names <- names(sim_data$sample.times[sub_indices])
+  sim.tree <- ape::keep.tip(sim_data$sim.tree, sub_indices)
   
-  sim_data_sub$sequences <- sim_data$sequences[sub_indices]
-  sim_data_sub$sample.times <- sim_data$sample.times[sub_indices]
-  sim_data_sub$sample.hosts <- sim_data$sample.hosts[sub_indices]
-  sim_data_sub$sim.tree <- ape::keep.tip(sim_data$sim.tree, sub_indices)
+  #reorder stuff to be consistent
+  #make ordering transformations (borrowed from phybreakdata)
+  allhosts <- unique(sample.hosts)
+  allfirsttimes <- rep(FALSE, length(sample.times))
+  sapply(allhosts, function(x) allfirsttimes[which(min(sample.times[sample.hosts == x]) == sample.times & (sample.hosts == x))[1]] <<- TRUE)
+  outputorderhosts <- order(sample.times[allfirsttimes])
+  orderedhosts <- host.names[allfirsttimes][outputorderhosts]
+  outputordersamples <- order(!allfirsttimes, match(sample.hosts, orderedhosts), sample.times)
+  sequences <- sequences[outputordersamples, ]
+  sample.times <- sample.times[outputordersamples]
+  sample.names <- sample.names[outputordersamples]
+  host.names <- host.names[outputordersamples]
+  
+  sim_data_sub <- phybreakdata(sequences = sequences, 
+                               sample.times = sample.times, 
+                               sample.names = sample.names, 
+                               host.names = sample.hosts,
+                               sim.infection.times = sim_data$sim.infection.times[orderedhosts],
+                               sim.infectors = sim_data$sim.infectors[orderedhosts], 
+                               sim.tree = sim.tree)
   
   return(sim_data_sub)
 }
