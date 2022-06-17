@@ -1,7 +1,7 @@
 # biophybreak
 Code from Lundgren et al "Combining biomarker and virus phylogenetic models improves epidemiological source identification" (submitted to PLOS Computational Biology)
 
-https://github.com/MolEvolEpid/biophybreak
+**[https://github.com/MolEvolEpid/biophybreak](https://github.com/MolEvolEpid/biophybreak)**
 
 Modified from phybreak, the package implementing the method described in Klinkenberg et al (2016), doi: http://dx.doi.org/10.1101/069195
 
