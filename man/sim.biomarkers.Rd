@@ -14,7 +14,8 @@ sim.biomarkers(
 )
 }
 \arguments{
-\item{t.inf}{A vector of the true infection ages for each individual}
+\item{t.inf}{A vector or list of the true infection ages for each individual. 
+If given as a list, multiple infection ages can used per individual, and the output will be returned as a list.}
 
 \item{mub}{A vector of length 12 for the means of the random effects parameters for the Multiple Biomarker Model.}
 

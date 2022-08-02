@@ -1,7 +1,8 @@
 #' @title Simulate biomarker values 
 #' @description Function to simulate biomarkers
 #' This version uses the actual CD4 values, not the square root transformed values of previous versions
-#' @param t.inf A vector of the true infection ages for each individual
+#' @param t.inf A vector or list of the true infection ages for each individual. 
+#' If given as a list, multiple infection ages can used per individual, and the output will be returned as a list.
 #' @param mub A vector of length 12 for the means of the random effects parameters for the Multiple Biomarker Model.
 #' @param Sigmab A 12x12 matrix for the covariance matrix of the random effects parameters for the Multiple Biomarker Model
 #' @param sigmae A vector for the variances (not standard deviations) of the error paramemeters in the Multiple Biomarker Model
@@ -36,30 +37,58 @@ sim.biomarkers <- function(t.inf,
   #pol_sim <- rep(-1, nInd)
   #pol2_sim <- rep(-1, nInd)
   
-  biomarkers <- matrix(-1, nrow = nInds, ncol = 5)
+  if(!is.list(t.inf)){
+    t.inf <- as.list(t.inf)
+    return.list <- FALSE
+  } else{
+    return.list <- TRUE
+  }
+  
+  #if(is.list(t_inf)){
+  biomarkers <- list()
+  for(i in 1:nInds){
+    biomarkers[[i]] <- matrix(-1, nrow = length(t.inf[[i]]), ncol = 5)
+  }
+  #} else{
+  #  biomarkers <- matrix(-1, nrow = nInds, ncol = 5)
+  #}
   
   #simulate biomarker values
   for(i in 1:nInds){
     #reroll if any values are negative
-    while(any(biomarkers[i,which(!is.na(biomarkers[i,]))] < 0)){ #are any of the used biomarkers negative?
+    while(any(biomarkers[[i]][which(!is.na(biomarkers[[i]]))] < 0)){ #are any of the used biomarkers negative?
       b_sim[i,] <- mvtnorm::rmvnorm(1, mub, Sigmab)
       
       #BED
-      biomarkers[i,1] <- b_sim[i,1] + (b_sim[i,2] - b_sim[i])*exp(-exp(b_sim[i,3])*t.inf[i]) + rnorm(1, 0, sqrt(sigmae[1]))
+      biomarkers[[i]][,1] <- b_sim[i,1] + (b_sim[i,2] - b_sim[i])*exp(-exp(b_sim[i,3])*t.inf[[i]]) + rnorm(length(t.inf[[i]]), 0, sqrt(sigmae[1]))
       #LAg
-      biomarkers[i,2] <- b_sim[i,8]+(b_sim[i,9]-b_sim[i,8])*exp(-exp(b_sim[i,10])*t.inf[i]) + rnorm(1, 0, sqrt(sigmae[2]))
+      biomarkers[[i]][,2] <- b_sim[i,8]+(b_sim[i,9]-b_sim[i,8])*exp(-exp(b_sim[i,10])*t.inf[[i]]) + rnorm(length(t.inf[[i]]), 0, sqrt(sigmae[2]))
       #CD4
-      biomarkers[i,3] <- ((b_sim[i,4]+b_sim[i,5]*t.inf[i] + rnorm(1, 0, sqrt(sigmae[3])))*24)^2
+      biomarkers[[i]][,3] <- ((b_sim[i,4]+b_sim[i,5]*t.inf[[i]] + rnorm(length(t.inf[[i]]), 0, sqrt(sigmae[3])))*24)^2
       #pol
-      biomarkers[i,4] <- (b_sim[i,6]+b_sim[i,7]*t.inf[i] + rnorm(1, 0, sqrt(sigmae[4])))/200
+      biomarkers[[i]][,4] <- (b_sim[i,6]+b_sim[i,7]*t.inf[[i]] + rnorm(length(t.inf[[i]]), 0, sqrt(sigmae[4])))/200
       #pol2
-      biomarkers[i,5] <- (b_sim[i,11]+b_sim[i,12]*t.inf[i] + rnorm(1, 0, sqrt(sigmae[5])))/200
+      biomarkers[[i]][,5] <- (b_sim[i,11]+b_sim[i,12]*t.inf[[i]] + rnorm(length(t.inf[[i]]), 0, sqrt(sigmae[5])))/200
       
       #make it so unused biomarkers are NA
-      biomarkers[i,which(which.biomarkers[i,] == 0)] <- NA
+      biomarkers[[i]][,which(which.biomarkers[i,] == 0)] <- NA
     }
   }
-  return(biomarkers)
+  
+  #add names to biomarker matrices
+  for(i in 1:length(biomarkers)){
+    colnames(biomarkers[[i]]) <- c("BED", "LAg", "CD4", "pol", "pol2")
+  }
+  
+  if(return.list){
+    return(biomarkers)
+  } else{
+    biomarkers_matrix <- biomarkers[[1]]
+    for(i in 2:length(biomarkers)){
+      biomarkers_matrix <- rbind2(biomarkers_matrix, biomarkers[[i]])
+    }
+    return(biomarkers_matrix)
+  }
 }
 
 #' @title Predict infection times with MBM
