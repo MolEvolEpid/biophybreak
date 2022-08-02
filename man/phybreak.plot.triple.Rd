@@ -4,7 +4,14 @@
 \alias{phybreak.plot.triple}
 \title{Plot MPC tree, infection age distributions, and infector posterior supports}
 \usage{
-phybreak.plot.triple(MCMCstate, phybreak.true = NULL, angle = 90, ...)
+phybreak.plot.triple(
+  MCMCstate,
+  phybreak.true = NULL,
+  angle = 90,
+  tree.col = NULL,
+  color.shuffle = NULL,
+  ...
+)
 }
 \arguments{
 \item{MCMCstate}{The output from sample_phybreak}
@@ -12,6 +19,10 @@ phybreak.plot.triple(MCMCstate, phybreak.true = NULL, angle = 90, ...)
 \item{phybreak.true}{The true transmission history (if using simulated data)}
 
 \item{angle}{Angle of x-axis labels in the infector posterior density plot}
+
+\item{tree.col}{Colors to use for each individual}
+
+\item{color.shuffle}{Changes to the default color ordering}
 
 \item{...}{Other parameters that can be passed to ggplot::labs}
 }

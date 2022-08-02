@@ -273,11 +273,13 @@ phybreak.plot.posteriors <- function(post_prob_df, treecolors = NULL, unsampled 
 #' @param MCMCstate The output from sample_phybreak
 #' @param phybreak.true The true transmission history (if using simulated data)
 #' @param angle Angle of x-axis labels in the infector posterior density plot
+#' @param tree.col Colors to use for each individual
+#' @param color.shuffle Changes to the default color ordering
 #' @param ... Other parameters that can be passed to ggplot::labs
 #' @export
 #' 
 phybreak.plot.triple <- function(MCMCstate, phybreak.true = NULL,
-                                 angle = 90, ...){
+                                 angle = 90, tree.col = NULL, color.shuffle = NULL, ...){
   #number of individuals
   nInd <- length(unique(MCMCstate$d$hostnames))
   #find xmin appropriate from biomarker distributions
@@ -298,8 +300,27 @@ phybreak.plot.triple <- function(MCMCstate, phybreak.true = NULL,
     layout(matrix(c(2,1,3,4), nrow = 4))
   }
   
+  #find colors
+  if(is.null(tree.col)){
+    treecolors <- hcl(unlist(sapply(1:floor(sqrt(nInd)) - 1, 
+                                    function(xx) seq(xx, nInd - 1, 
+                                                     floor(sqrt(nInd))))) * 360/nInd, 
+                      c = 100, l = 65)
+  } else{
+    if(length(tree.col) != nInd){
+      stop("tree.col must be the same length as the number of individuals")
+    }
+    treecolors <- tree.col
+  }
+  if(!is.null(color.shuffle)){
+    if(length(color.shuffle) != nInd){
+      stop("color.shuffle must be the same length as the number of individuals")
+    }
+    treecolors <- treecolors[color.shuffle]
+  }
+  
   #plot MPC tree
-  plotPhyloTrans(MCMCstate, plot.which = "mpc", 
+  plotPhyloTrans(MCMCstate, plot.which = "mpc", tree.col = treecolors,
                  xlim.adjust = c(time_min.1.all, 0),
                  xlab = "", mar = c(2,3.85,0,.2))
   #find x limits
@@ -309,15 +330,11 @@ phybreak.plot.triple <- function(MCMCstate, phybreak.true = NULL,
   new_xlims[2] <- diff(new_xlims) + new_xlims[1]
   #plot true transmission history if it is known
   if(class(phybreak.true) == "phybreakdata"){
-    plotPhyloTrans(phybreak.true, 
+    plotPhyloTrans(phybreak.true, tree.col = treecolors,
                    xlim.override = new_xlims, #may not work great if true infection times are older than predicted ones
                    xlab = "", mar = c(2,2.55,0,.2))
   }
   #plot infection times
-  treecolors <- hcl(unlist(sapply(1:floor(sqrt(nInd)) - 1, 
-                                  function(xx) seq(xx, nInd - 1, 
-                                                   floor(sqrt(nInd))))) * 360/nInd, 
-                    c = 100, l = 65)
   ymax <- max(sapply(MCMCstate$p$sample.pdf.nonpar, FUN = function(dens){max(dens$y)}))
   par(mar = c(3, 2.6, 1, .2), mgp = c(1.5, 0.5, 0))
   plot(-MCMCstate$p$sample.pdf.nonpar[[1]]$x + MCMCstate$d$sample.times[1], 
@@ -352,7 +369,7 @@ phybreak.plot.triple <- function(MCMCstate, phybreak.true = NULL,
   grid::pushViewport(vps$figure)
   vp1 <-grid::plotViewport(c(0,0,0,0))
   posterior_dens <- phybreak.plot.posteriors(post_prob_df, 
-                                             ylab = "Infector Posterior Support", angle = angle, ...)
+                                             ylab = "Infector Posterior Support", angle = angle, treecolors = treecolors, ...)
   print(posterior_dens, vp = vp1)
   grid::popViewport()
 }
