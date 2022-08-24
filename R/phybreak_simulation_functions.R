@@ -187,13 +187,23 @@ sim.coal.phybreak <- function(tt,
   #find number of individuals
   nInd <- length(tt$names)
   
-  #transmission tree must be ordered from oldest to most recent infection date
-  tt_old <- tt
-  tt <- tt[order(tt$t_inf),]
-  donor_shuff <- tt$donor
-  for(i in 1:nInd){
-    if(tt$donor[i] != 0){
-      tt$donor[i] <- which(tt$names == tt_old$names[donor_shuff[i]])
+  #transmission tree (and other parameters) must be ordered from oldest to most recent infection date
+  if(is.unsorted(tt$t_inf)){
+    tt_old <- tt
+    new_order <- order(tt$t_inf)
+    tt <- tt[new_order,]
+    a <- a[new_order]
+    b <- b[new_order]
+    rhoR <- rhoR[new_order]
+    rhoD <- rhoD[new_order]
+    nSamples <- nSamples[new_order]
+    sample.times <- sample.times[new_order]
+    tr_window <- tr_window[new_order]
+    donor_shuff <- tt$donor
+    for(i in 1:nInd){
+      if(tt$donor[i] != 0){
+        tt$donor[i] <- which(tt$names == tt_old$names[donor_shuff[i]])
+      }
     }
   }
   
@@ -436,6 +446,9 @@ sim.coal.tree <- function(tt = NULL,
   
   if(any(c(a, b, rhoD, rhoR) < 0)) stop("Values of a, b, rhoD, and rhoR must be non-negative")
   
+  #check whether (forwards time) transmission from recipient back to donor is ever possible
+  rhoD_any <- any(rhoD > 0)
+  
   #make sure nSamples and sample.times inputs are consistent
   if(is.null(nSamples) & is.null(sample.times)){
     nSamples <- rep(1, nInd) #default to one sample per individual if neither are provided
@@ -469,26 +482,43 @@ sim.coal.tree <- function(tt = NULL,
     }
   }
   
+  
+  
+  #transmission tree (and other parameters) must be ordered from oldest to most recent infection date
+  if(is.unsorted(tt$t_inf)){
+    tt_old <- tt
+    new_order <- order(tt$t_inf)
+    tt <- tt[new_order,]
+    a <- a[new_order]
+    b <- b[new_order]
+    rhoR <- rhoR[new_order]
+    rhoD <- rhoD[new_order]
+    nSamples <- nSamples[new_order]
+    sample.times <- sample.times[new_order]
+    tr_window <- tr_window[new_order]
+    donor_shuff <- tt$donor
+    for(i in 1:nInd){
+      if(tt$donor[i] != 0){
+        tt$donor[i] <- which(tt$names == tt_old$names[donor_shuff[i]])
+      }
+    }
+  }
+  
+  #find which individuals have at least 1 sample
+  nSamples_nonzero <- which(nSamples > 0)
+  
   #sample times as vector
   sample.times.unlist <- unlist(sample.times)
   #find all unique sample times for easier checking of values
   sample.times.unique <- unique(unlist(sample.times))
   
-  #transmission tree must be ordered from oldest to most recent infection date
-  tt_old <- tt
-  tt <- tt[order(tt$t_inf),]
-  donor_shuff <- tt$donor
-  for(i in 1:nInd){
-    if(tt$donor[i] != 0){
-      tt$donor[i] <- which(tt$names == tt_old$names[donor_shuff[i]])
-    }
-  }
-  
+  #find times when transmission windows open
+  tr_window_times <- tt$t_inf + tr_window
   
   #TODO make sure values are possible
   
   #starting guess for how many iterations may be needed (can be extended in loop)
-  iter_guess <- (sum(nSamples)) #start guessing no migration events
+  iter_guess <- length(sample.times.unique)+ nInd #start guessing no migration events
   
   #vector for times of events
   t <- vector(length = iter_guess)
@@ -529,11 +559,11 @@ sim.coal.tree <- function(tt = NULL,
   int_node <- 0 #counter for number of internal nodes
   
   #initialize matrices for RVs
-  z <- matrix(nrow = iter_guess, ncol = nInd)
-  mD <- matrix(nrow = iter_guess, ncol = nInd)
-  mR <- matrix(nrow = iter_guess, ncol = nInd)
-  t_new_w <- matrix(nrow = iter_guess, ncol = nInd)
-  t_new_s <- matrix(nrow = iter_guess, ncol = nInd)
+  z <- matrix(Inf, nrow = iter_guess, ncol = nInd)
+  mD <- matrix(Inf, nrow = iter_guess, ncol = nInd)
+  mR <- matrix(Inf, nrow = iter_guess, ncol = nInd)
+  t_new_w <- matrix(Inf, nrow = iter_guess, ncol = nInd)
+  t_new_s <- matrix(Inf, nrow = iter_guess, ncol = nInd)
   
   #initialize other things to keep track
   t_event <- numeric(iter_guess) #time for each event (not cumulative)
@@ -545,17 +575,17 @@ sim.coal.tree <- function(tt = NULL,
   i <- 1 #index for number of events
   
   #loop as long as there is more than one lineage in longest infected patient or it is during the time second patient is infected
-  while(k_all[1] > 1 | t[i] - tt$t_inf[2] > -1e-15){
+  while(k_all[1] > 1 || (rhoD_any && t[i] - tt$t_inf[2] > -1e-15) || sum(k_all[2:nInd]) > 0){
     #double lengths if necessary
     if(i == iter_guess){
       
       t <- c(t, numeric(iter_guess))
       
-      z <- rbind(z, matrix(nrow = iter_guess, ncol = nInd))
-      mD <- rbind(mD, matrix(nrow = iter_guess, ncol = nInd))
-      mR <- rbind(mR, matrix(nrow = iter_guess, ncol = nInd))
-      t_new_w <- rbind(t_new_w, matrix(nrow = iter_guess, ncol = nInd))
-      t_new_s <- rbind(t_new_s, matrix(nrow = iter_guess, ncol = nInd))
+      z <- rbind(z, matrix(Inf, nrow = iter_guess, ncol = nInd))
+      mD <- rbind(mD, matrix(Inf, nrow = iter_guess, ncol = nInd))
+      mR <- rbind(mR, matrix(Inf, nrow = iter_guess, ncol = nInd))
+      t_new_w <- rbind(t_new_w, matrix(Inf, nrow = iter_guess, ncol = nInd))
+      t_new_s <- rbind(t_new_s, matrix(Inf, nrow = iter_guess, ncol = nInd))
       
       t_event <- c(t_event, numeric(iter_guess))
       event <- c(event, integer(iter_guess))
@@ -564,58 +594,74 @@ sim.coal.tree <- function(tt = NULL,
       
       iter_guess <- 2*iter_guess
     }
-    
     #coalescence events
-    for(j in 1:nInd){
-      if(k[j] > 1){ #also include "& t[i] <= tt$t_sam[j]"?
-        unif_rv <- runif(1)
-        z[i,j] <- Fz(unif_rv, k[j], a[j], b[j], (t[i] - tt$t_inf[j])*gen.rate)/gen.rate
-      }
-      else{
-        z[i,j] <- Inf
-      }
-    }
+    #for(j in 1:nInd){
+    #  if(k[j] > 1){ #also include "& t[i] <= tt$t_sam[j]"?
+    #    unif_rv <- runif(1)
+    #    z[i,j] <- Fz(unif_rv, k[j], a[j], b[j], (t[i] - tt$t_inf[j])*gen.rate)/gen.rate
+    #  }
+    #  #else{
+    #  #  z[i,j] <- Inf
+    #  #}
+    #}
+    k_atleast2 <- which(k >= 2)
+    #print(k_atleast2)
+    nk_atleast2 <- length(k_atleast2)
+    #print(Fz(runif(nk_atleast2), k[k_atleast2], a[k_atleast2], b[k_atleast2], (t[i] - tt$t_inf)*gen.rate)/gen.rate)
+    z[i,k_atleast2] <- Fz(runif(nk_atleast2), k[k_atleast2], a[k_atleast2], b[k_atleast2], (t[i] - tt$t_inf[k_atleast2])*gen.rate)/gen.rate
     
     #(reverse time) migrations events from donor to recipient
-    for(j in 1:nInd){
-      if(k[j] >= 1 & rhoD[j] > 0 &
-         any(t[i] - tt$t_inf[which(tt$donor == j)] > 0 & #test to see if any recipients with donor j are in a contact window with j
-             t[i] - tt$t_inf[which(tt$donor == j)] <= tr_window[which(tt$donor == j)])){
-        mD[i,j] <- Fm(runif(1), k[j], rhoD[j], a[j], b[j], (t[i] - tt$t_inf[j])*gen.rate)/gen.rate
-      } else{
-        mD[i,j] <- Inf
+    if(rhoD_any){
+      for(j in 1:nInd){
+        if(rhoD[j] > 0 && k[j] >= 1 &&
+           any(t[i] - tt$t_inf[which(tt$donor == j)] > 0 && #test to see if any recipients with donor j are in a contact window with j
+               t[i] - tt$t_inf[which(tt$donor == j)] <= tr_window[which(tt$donor == j)])){
+          mD[i,j] <- Fm(runif(1), k[j], rhoD[j], a[j], b[j], (t[i] - tt$t_inf[j])*gen.rate)/gen.rate
+        } #else{
+        #  mD[i,j] <- Inf
+        #}
       }
     }
     
     #(reverse time) migrations events from recipient to donor
-    for(j in 1:nInd){
-      if(j != 1 & k[j] >= 1 & t[i] - tt$t_inf[j] >= 0 & t[i] <= tt$t_inf[j] + tr_window[j]){
-        mR[i,j] <- min(t[i] - tt$t_inf[j], Fm(runif(1), k[j], rhoR[j], a[j], b[j], (t[i] - tt$t_inf[j])*gen.rate)/gen.rate)
-      } else{
-        mR[i,j] <- Inf
-      }
+    t_t_inf_diffs <- t[i] - tt$t_inf
+    k_nonzero <- which(k >= 1)
+    for(j in k_nonzero){
+      if(j != 1 && t_t_inf_diffs[j] >= 0 && t[i] <= tr_window_times[j]){
+        if(rhoR[j] > 0){
+          mR[i,j] <- min(t_t_inf_diffs[j], Fm(runif(1), k[j], rhoR[j], a[j], b[j], (t[i] - tt$t_inf[j])*gen.rate)/gen.rate)
+        } else{
+          mR[i,j] <- t_t_inf_diffs[j]
+        }
+        
+      } #else{
+      #  mR[i,j] <- Inf
+      #}
     }
     
     #time when a new transmission window opens
-    for(j in 1:nInd){
-      if(t[i] > tt$t_inf[j] + tr_window[j]){   
-        #after end of transmission window (forwards time)
-        #(potentially allow transmission after sampling)
-        t_new_w[i,j] <- t[i] - (tt$t_inf[j] + tr_window[j])
-      } else{
-        t_new_w[i,j] <- Inf
-      }
-    }
+    #for(j in 1:nInd){
+    #  if(t[i] > tt$t_inf[j] + tr_window[j]){   
+    #    #after end of transmission window (forwards time)
+    #    #(potentially allow transmission after sampling)
+    #    t_new_w[i,j] <- t[i] - (tt$t_inf[j] + tr_window[j])
+    #  } #else{
+    #  #  t_new_w[i,j] <- Inf
+    #  #}
+    #}
+    tr_window_times_t_diffs <- t[i] - tr_window_times
+    t_new_w[i,tr_window_times_t_diffs > 0] <- tr_window_times_t_diffs[tr_window_times_t_diffs > 0]
+    #t_new_w[i,(t[i] > tr_window_times)]
     
     #time when a new sample is taken #i think there is a simpler way to do this
-    for(j in 1:nInd){
+    for(j in nSamples_nonzero){
       if(any(t[i] > sample.times[[j]])){
         #is this after (forwards time) any samples have been taken from patient j?
         t_sam_diff <- t[i] - sample.times[[j]] #find difference between current time and sample times
         t_new_s[i,j] <- min(t_sam_diff[t_sam_diff > 0]) #minimum of values that are positive
-      } else{
-        t_new_s[i,j] <- Inf
-      }
+      } #else{
+      #  t_new_s[i,j] <- Inf
+      #}
       
     }
     
@@ -709,12 +755,14 @@ sim.coal.tree <- function(tt = NULL,
     #t[i+1] <- t[1] - sum(sort(t_event))
     
     #find new k's
-    for(j in 1:nInd){
-      #k[j] <- length(which(lins[[i+1]]$loc == j))
-      k[j] <- length(which(lins$loc == j))
-      #k_all[j] <- length(which(lins[[i+1]]$loc == j | lins[[i+1]]$loc == -j))
-      k_all[j] <- length(which(lins$loc == j | lins$loc == -j))
-    }
+    #for(j in 1:nInd){
+    #  #k[j] <- length(which(lins[[i+1]]$loc == j))
+    #  k[j] <- length(which(lins$loc == j))
+    #  #k_all[j] <- length(which(lins[[i+1]]$loc == j | lins[[i+1]]$loc == -j))
+    #  k_all[j] <- length(which(lins$loc == j | lins$loc == -j))
+    #}
+    k <- tabulate(lins$loc, nbins = nInd)
+    k_all <- k + tabulate(-lins$loc, nbins = nInd)
     
     i <- i + 1
   }
