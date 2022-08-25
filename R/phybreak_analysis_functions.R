@@ -386,3 +386,49 @@ find_cdf <- function(x,y){
   cdf_norm <- cdf_unnorm/max(cdf_unnorm)
   return(cdf_norm)
 }
+
+#' @title Find transmission rates between individuals with certain labels
+#' @description Function to find the expected number of transmission between and within individuals 
+#' with some 
+#' @param MCMCstate The output from sample_phybreak
+#' @param labels The labels for each individual
+#' @param infector.posterior.probabilities The matrix of posterior probabilities of the infectors, 
+#' as supplied by phybreak.infector.posts(MCMCstate)$post_support
+#' @export
+#' 
+label.transmissions <- function(MCMCstate, labels, infector.posterior.probabilities = phybreak.infector.posts(MCMCstate)$post_support){
+  #make sure labels are a factor
+  labels <- as.factor(labels)
+  
+  #levels of label factors
+  label.levels <- levels(labels)
+  
+  #number of unique labels
+  nLabels <- length(unique(labels))
+  
+  #matrix for number of transmissions between pairs of labels
+  label.transmissions <- matrix(0, nrow = nLabels, ncol = nLabels)
+  
+  #number of individuals
+  nInd <- dim(infector.posterior.probabilities)[2]
+  
+  #labels of infectors for each individual
+  infector.labels <- matrix(nrow = nInd, ncol = nLabels)
+  for(i in 1:nInd){
+    for(j in 1:nLabels){
+      infector.labels[i,j] <- infector.posterior.probabilities[2:(nInd+1),i] %*% (labels == label.levels[j])
+    }
+  }
+  
+  for(i in 1:nInd){
+    label.transmissions[which(label.levels == labels[i]),] <- label.transmissions[which(label.levels == labels[i]),] + infector.labels[i,]
+  }
+  
+  rownames(infector.labels) <- MCMCstate$d$hostnames[1:nInd]
+  colnames(infector.labels) <- label.levels
+  
+  rownames(label.transmissions) <- label.levels
+  colnames(label.transmissions) <- label.levels
+  
+  return(list(infector.labels, label.transmissions))
+}
