@@ -18,6 +18,10 @@ label.transmissions(
 \item{infector.posterior.probabilities}{The matrix of posterior probabilities of the infectors, 
 as supplied by phybreak.infector.posts(MCMCstate)$post_support}
 }
+\value{
+A matrix containing the the probabilities for each individual to be infected by a sampled individual of a certain label
+and a matrix with the number of transmissions between and within individuals with each label
+}
 \description{
 Function to find the expected number of transmission between and within individuals 
 with some

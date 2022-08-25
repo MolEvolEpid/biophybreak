@@ -394,6 +394,8 @@ find_cdf <- function(x,y){
 #' @param labels The labels for each individual
 #' @param infector.posterior.probabilities The matrix of posterior probabilities of the infectors, 
 #' as supplied by phybreak.infector.posts(MCMCstate)$post_support
+#' @return A matrix containing the the probabilities for each individual to be infected by a sampled individual of a certain label
+#' and a matrix with the number of transmissions between and within individuals with each label
 #' @export
 #' 
 label.transmissions <- function(MCMCstate, labels, infector.posterior.probabilities = phybreak.infector.posts(MCMCstate)$post_support){
