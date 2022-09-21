@@ -1,5 +1,5 @@
 # biophybreak
-Code from Lundgren et al "Combining biomarker and virus phylogenetic models improves epidemiological source identification" (Accepted for PLOS Computational Biology)
+Code from Lundgren et al "Combining biomarker and virus phylogenetic models improves epidemiological source identification" published in PLOS Computational Biology 2022 Aug 26;18(8):e1009741
 
 Modified from phybreak, the package implementing the method described in Klinkenberg et al (2016), doi: http://dx.doi.org/10.1101/069195
 
