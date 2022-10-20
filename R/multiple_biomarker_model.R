@@ -97,14 +97,17 @@ sim.biomarkers <- function(t.inf,
 #' @param BED A vector of BED values, one for each individual. Can be omitted.
 #' @param LAg A vector of LAg values, one for each individual. Can be omitted.
 #' @param CD4 A vector of CD4 values, one for each individual. These are the actual CD4+ T-cell concentrations, not the square-root transformed ones used in previous versions. 
-#'   This value must be provided. 
+#'   Can be omitted.
 #' @param pol A vector for the proportion of polymorphic sites in the HIV polymerase gene, one for each individual.
 #'   This value must be provided.
 #' @param pol2 A vector of values for the diversity in the HIV polymerase gene as obtained from NGS, one for each individual. Can be omitted.
 #' @param prev.neg.time The amount of time in between an individual's positive HIV test and a previous negative test. 
 #'   Use Inf or NA if no previous negative test is available.
-#' @param t.sam.delay A vector for the difference in time (in years (days/365.25)) between the dates of the positive test and when the biomarkers aside from CD4 were sampled.
-#' @param t.CD4.delay A vector for the difference in time (in years (days/365.25)) between the dates of the positive test and when CD4 was sampled.
+#' @param t.BED.delay A vector or matrix for the difference in time (in years (days/365.25)) between the dates of the positive test and when BED was sampled.
+#' @param t.LAg.delay A vector or matrix for the difference in time (in years (days/365.25)) between the dates of the positive test and when LAg was sampled.
+#' @param t.CD4.delay A vector or matrix for the difference in time (in years (days/365.25)) between the dates of the positive test and when CD4 was sampled.
+#' @param t.pol.delay A vector or matrix for the difference in time (in years (days/365.25)) between the dates of the positive test and when pol was sampled.
+#' @param t.pol2.delay A vector or matrix for the difference in time (in years (days/365.25)) between the dates of the positive test and when pol2 was sampled.
 #' @param mub A vector of length 12 for the means of the random effects parameters for the Multiple Biomarker Model.
 #' @param Sigmab A 12x12 matrix for the covariance matrix of the random effects parameters for the Multiple Biomarker Model
 #' @param sigmae A vector for the variances (not standard deviations) of the error paramemeters in the Multiple Biomarker Model
@@ -122,10 +125,17 @@ sim.biomarkers <- function(t.inf,
 #'   If output.raw is TRUE, "raw" is the matrix of MCMC samples of the infection ages for all individuals.
 #' @export
 
-mbm.predict <- function(BED = rep(NA, length(CD4)), LAg = rep(NA, length(CD4)), CD4, pol, pol2 = rep(NA, length(CD4)),
+mbm.predict <- function(BED = rep(NA, length(pol)), 
+                        LAg = rep(NA, length(pol)), 
+                        CD4 = rep(NA, length(pol)), 
+                        pol, 
+                        pol2 = rep(NA, length(pol)),
                         prev.neg.time = NULL, 
-                        t.sam.delay = rep(0, length(CD4)),
-                        t.CD4.delay = rep(0, length(CD4)),
+                        t.BED.delay = NULL,
+                        t.LAg.delay = NULL,
+                        t.CD4.delay = NULL,
+                        t.pol.delay = rep(0, length(pol)),
+                        t.pol2.delay = NULL,
                         mub, 
                         Sigmab, 
                         sigmae,
@@ -133,11 +143,24 @@ mbm.predict <- function(BED = rep(NA, length(CD4)), LAg = rep(NA, length(CD4)), 
                         inf.mean = 2, inf.sd = 1.5, 
                         max.seroconvert.delay = 2/12,
                         output.raw = FALSE,
-                        seed = sample(1e9, 1)){
+                        seed = sample(1e9, 1),
+                        ...){
   #set RNG seed 
   set.seed(seed)
   
-  #output can be "continuous", "numeric", or "both"
+  #convert legacy input
+  addn.input <- list(...)
+  if("t.sam.delay" %in% names(addn.input)) t.pol.delay <- addn.input$t.sam.delay
+  
+  #delays between diagnosis and biomarker sampling default to those for pol
+  if(is.null(t.BED.delay)) t.BED.delay <- t.pol.delay
+  t.BED.delay[is.na(t.BED.delay)] <- t.pol.delay[is.na(t.BED.delay)]
+  if(is.null(t.LAg.delay)) t.LAg.delay <- t.pol.delay
+  t.LAg.delay[is.na(t.LAg.delay)] <- t.pol.delay[is.na(t.LAg.delay)]
+  if(is.null(t.CD4.delay)) t.CD4.delay <- t.pol.delay
+  t.CD4.delay[is.na(t.CD4.delay)] <- t.pol.delay[is.na(t.CD4.delay)]
+  if(is.null(t.pol2.delay)) t.pol2.delay <- t.pol.delay
+  t.pol2.delay[is.na(t.pol2.delay)] <- t.pol.delay[is.na(t.pol2.delay)]
   
   #put into matrix format for JAGS model if it is not already
   if(!is.matrix(CD4)){
@@ -165,15 +188,30 @@ mbm.predict <- function(BED = rep(NA, length(CD4)), LAg = rep(NA, length(CD4)), 
   } else{
     pol2.test <- pol2
   }
-  if(!is.matrix(t.sam.delay)){
-    t.sam.delay.test <- matrix(t.sam.delay, ncol = dim(cd4.test)[2])
+  if(!is.matrix(t.pol.delay)){
+    t.pol.delay.test <- matrix(t.pol.delay, ncol = dim(cd4.test)[2])
   } else{
-    t.sam.delay.test <- t.sam.delay
+    t.pol.delay.test <- t.pol.delay
   }
   if(!is.matrix(t.CD4.delay)){
-    t.CD4.delay.test <- matrix(t.CD4.delay, ncol = dim(cd4.test)[2])
+    t.cd4.delay.test <- matrix(t.CD4.delay, ncol = dim(cd4.test)[2])
   } else{
-    t.CD4.delay.test <- t.CD4.delay
+    t.cd4.delay.test <- t.CD4.delay
+  }
+  if(!is.matrix(t.BED.delay)){
+    t.bed.delay.test <- matrix(t.BED.delay, ncol = dim(cd4.test)[2])
+  } else{
+    t.bed.delay.test <- t.BED.delay
+  }
+  if(!is.matrix(t.LAg.delay)){
+    t.lag.delay.test <- matrix(t.LAg.delay, ncol = dim(cd4.test)[2])
+  } else{
+    t.lag.delay.test <- t.LAg.delay
+  }
+  if(!is.matrix(t.pol2.delay)){
+    t.pol2.delay.test <- matrix(t.pol2.delay, ncol = dim(cd4.test)[2])
+  } else{
+    t.pol2.delay.test <- t.pol2.delay
   }
   
   nInds <- dim(bed.test)[1]
@@ -185,15 +223,18 @@ mbm.predict <- function(BED = rep(NA, length(CD4)), LAg = rep(NA, length(CD4)), 
   }
   
   #check that all biomarker vectors have the same length
-  if(dim(lag.test)[1] != nInds | dim(cd4.test)[1] != nInds | dim(pol.test)[1] != nInds | 
-     dim(pol2.test)[1] != nInds | dim(t.sam.delay.test)[1] != nInds | dim(t.CD4.delay.test)[1] != nInds | 
+  if(dim(lag.test)[1] != nInds || dim(cd4.test)[1] != nInds || dim(pol.test)[1] != nInds || 
+     dim(pol2.test)[1] != nInds || dim(t.pol.delay.test)[1] != nInds || dim(t.cd4.delay.test)[1] != nInds || 
+     dim(t.bed.delay.test)[1] != nInds || dim(t.lag.delay.test)[1] != nInds || dim(t.pol2.delay.test)[1] != nInds || 
      length(prev.neg.time) != nInds){
-    stop("BED, LAg, CD4, pol, pol2, t.sam.delay, t.CD4.delay, and prev.neg.test must all have the same number of individuals")
+    stop("BED, LAg, CD4, pol, pol2, t.pol.delay, t.CD4.delay, t.BED.delay, t.LAg.delay, t.pol2.delay,
+         and prev.neg.test must all have the same number of individuals")
   }
   #check that all biomarkers have the same number of samples
-  if(dim(lag.test)[2] != nSamples | dim(cd4.test)[2] != nSamples | dim(pol.test)[2] != nSamples | 
-     dim(pol2.test)[2] != nSamples | dim(t.sam.delay.test)[2] != nSamples | dim(t.CD4.delay.test)[2] != nSamples){
-    stop("BED, LAg, CD4, pol, pol2, t.sam.delay, and t.CD4.delay 
+  if(dim(lag.test)[2] != nSamples || dim(cd4.test)[2] != nSamples || dim(pol.test)[2] != nSamples || 
+     dim(pol2.test)[2] != nSamples || dim(t.pol.delay.test)[2] != nSamples || dim(t.cd4.delay.test)[2] != nSamples || 
+     dim(t.bed.delay.test)[2] != nSamples || dim(t.lag.delay.test)[2] != nSamples || dim(t.pol2.delay.test)[2] != nSamples){
+    stop("BED, LAg, CD4, pol, pol2, t.pol.delay, t.CD4.delay, t.BED.delay, t.LAg.delay, and t.pol2.delay
          must all have the same number of samples (use NA for unavailable samples)")
   }
   
@@ -203,10 +244,14 @@ mbm.predict <- function(BED = rep(NA, length(CD4)), LAg = rep(NA, length(CD4)), 
   mcd4 <- rowSums(!is.na(cd4.test))
   mpol <- rowSums(!is.na(pol.test))
   mpol2 <- rowSums(!is.na(pol2.test))
-  mt.sam.delay <- rowSums(!is.na(t.sam.delay.test))
-  mt.CD4.delay <- rowSums(!is.na(t.CD4.delay.test))
+  mt.bed.delay <- rowSums(!is.na(t.bed.delay.test))
+  mt.lag.delay <- rowSums(!is.na(t.lag.delay.test))
+  mt.cd4.delay <- rowSums(!is.na(t.cd4.delay.test))
+  mt.pol.delay <- rowSums(!is.na(t.pol.delay.test))
+  mt.pol2.delay <- rowSums(!is.na(t.pol2.delay.test))
   
-  mp <- apply(cbind(mbed, mlag, mcd4, mpol, mpol2, mt.sam.delay, mt.sam.delay, mt.CD4.delay), 1, max)
+  mp <- apply(cbind(mbed, mlag, mcd4, mpol, mpol2, 
+                    mt.bed.delay, mt.lag.delay, mt.cd4.delay, mt.pol.delay, mt.pol2.delay), 1, max)
   
   #check to make sure output request is valid
   #if(!(output == "continuous" | output == "numeric" | output == "both")){
@@ -249,26 +294,20 @@ mbm.predict <- function(BED = rep(NA, length(CD4)), LAg = rep(NA, length(CD4)), 
   
   input_data <- list(np = nInds, mp = mp, 
                      mub = mub, Precb = solve(Sigmab), prece = 1/sigmae,
-                     #t_test and tcd4 test are there in case the tests were at different times
-                     t_test = t.sam.delay.test, tcd4_test = t.CD4.delay.test,
-                     bed_test = bed.test, cd4_test = cd4.test/24, 
+                     t_bed_delay = t.bed.delay.test, 
+                     t_lag_delay = t.lag.delay.test, 
+                     t_cd4_delay = t.cd4.delay.test,
+                     t_pol_delay = t.pol.delay.test, 
+                     t_pol2_delay = t.pol2.delay.test, 
+                     bed_test = bed.test, 
+                     lag_test = lag.test, 
+                     cd4_test = cd4.test/24, 
                      pol_test = pol.test*200,
-                     lag_test = lag.test, pol2_test = pol2.test*200, 
+                     pol2_test = pol2.test*200, 
                      prior_shape = trunc.shape, prior_rate = trunc.rate, neg_time = max.uninf.time)
   
   #prediction model
   mbm_predict <- "
-  data{
-    #scale stuff here?
-    
-    #make identity matrix
-    for(i in 1:12){
-      for(j in 1:12){
-        eye[i,j] <- equals(i,j) #eye is the identity matrix
-      }
-    }
-  }
-  
   model{
     #####Prediction########
     #prior for age of infection
@@ -290,19 +329,19 @@ mbm.predict <- function(BED = rep(NA, length(CD4)), LAg = rep(NA, length(CD4)), 
     for(i in 1:np){
       for(j in 1:mp[i]){
         bed_test[i,j] ~ dnorm(mu_bed_pred[i,j],prece[1])
-        mu_bed_pred[i,j] <- b_pred[i,1] + (b_pred[i,2] - b_pred[i,1])*exp(-exp(b_pred[i,3])*(t_pred[i] + t_test[i,j]))
+        mu_bed_pred[i,j] <- b_pred[i,1] + (b_pred[i,2] - b_pred[i,1])*exp(-exp(b_pred[i,3])*(t_pred[i] + t_bed_delay[i,j]))
         
         lag_test[i,j] ~ dnorm(mu_lag_pred[i,j],prece[2])
-        mu_lag_pred[i,j] <- b_pred[i,8] + (b_pred[i,9] - b_pred[i,8])*exp(-exp(b_pred[i,10])*(t_pred[i] + t_test[i,j]))
+        mu_lag_pred[i,j] <- b_pred[i,8] + (b_pred[i,9] - b_pred[i,8])*exp(-exp(b_pred[i,10])*(t_pred[i] + t_lag_delay[i,j]))
         
         cd4_test[i,j] ~ dnorm(mu_cd4_pred[i,j],prece[3])
-        mu_cd4_pred[i,j]<- b_pred[i,4] + b_pred[i,5]*(t_pred[i] + tcd4_test[i,j])
+        mu_cd4_pred[i,j]<- b_pred[i,4] + b_pred[i,5]*(t_pred[i] + t_cd4_delay[i,j])
         
         pol_test[i,j] ~ dnorm(mu_pol_pred[i,j],prece[4])
-        mu_pol_pred[i,j]<- b_pred[i,6] + b_pred[i,7]*(t_pred[i] + t_test[i,j])
+        mu_pol_pred[i,j]<- b_pred[i,6] + b_pred[i,7]*(t_pred[i] + t_pol_delay[i,j])
         
         pol2_test[i,j] ~ dnorm(mu_pol2_pred[i,j],prece[5])
-        mu_pol2_pred[i,j]<- b_pred[i,11] + b_pred[i,12]*(t_pred[i] + t_test[i,j])
+        mu_pol2_pred[i,j]<- b_pred[i,11] + b_pred[i,12]*(t_pred[i] + t_pol2_delay[i,j])
       }
     }
     
@@ -337,11 +376,18 @@ mbm.predict <- function(BED = rep(NA, length(CD4)), LAg = rep(NA, length(CD4)), 
   pdf <- lapply(pdfs, FUN = function(x){x$pdf})
   pdf.num <- lapply(pdfs, FUN = function(x){x$pdf.num})
   
+  #find time between diagnosis and the first sequence
+  diag.first.seq.delay <- apply(t.pol.delay.test, MARGIN = 1, FUN = min, na.rm = TRUE)
+  
+  #shift infection age distributions to be relative to first sequence time rather than diagnosis time
+  pdf.num.seq <- mapply(FUN = diag.first.seq.shift, 
+                        infection.age.dists.diag = pdf.num, diag.first.seq.delay = diag.first.seq.delay)
+  
   #return(list(t_dens_unc, t_dens_sim, sample.pdf))
   if(output.raw == TRUE){
-    return(list(pdf = pdf, pdf.num = pdf.num, raw = mbm_pred[[1]]))
+    return(list(pdf = pdf, pdf.num = pdf.num, pdf.num.seq = pdf.num.seq, raw = mbm_pred[[1]]))
   } else{
-    return(list(pdf = pdf, pdf.num = pdf.num))
+    return(list(pdf = pdf, pdf.num = pdf.num, pdf.num.seq = pdf.num.seq))
   }
 }
 
@@ -375,4 +421,15 @@ normalize.density <- function(sample.density){
   #} else if(output == "both"){
   return(list(pdf = sample.pdf, pdf.num = sample.pdf_num))
   #}
+}
+
+#function to shift infection age distributions to be relative to first sequence time rather than diagnosis time
+diag.first.seq.shift <- function(infection.age.dists.diag, diag.first.seq.delay){
+  infection.age.dists.seq <- infection.age.dists.diag
+  #shift distributions if needed
+  if(diag.first.seq.delay > 0){
+    infection.age.dists.seq$x <- c(0, diag.first.seq.delay-1e-10, diag.first.seq.delay + infection.age.dists.seq$x)
+    infection.age.dists.seq$y <- c(1e-16, 1e-16, infection.age.dists.seq$y)
+  }
+  return(list(infection.age.dists.seq))
 }
