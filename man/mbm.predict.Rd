@@ -5,14 +5,17 @@
 \title{Predict infection times with MBM}
 \usage{
 mbm.predict(
-  BED = rep(NA, length(CD4)),
-  LAg = rep(NA, length(CD4)),
-  CD4,
+  BED = rep(NA, length(pol)),
+  LAg = rep(NA, length(pol)),
+  CD4 = rep(NA, length(pol)),
   pol,
-  pol2 = rep(NA, length(CD4)),
+  pol2 = rep(NA, length(pol)),
   prev.neg.time = NULL,
-  t.sam.delay = rep(0, length(CD4)),
-  t.CD4.delay = rep(0, length(CD4)),
+  t.BED.delay = NULL,
+  t.LAg.delay = NULL,
+  t.CD4.delay = NULL,
+  t.pol.delay = rep(0, length(pol)),
+  t.pol2.delay = NULL,
   mub,
   Sigmab,
   sigmae,
@@ -23,7 +26,8 @@ mbm.predict(
   inf.sd = 1.5,
   max.seroconvert.delay = 2/12,
   output.raw = FALSE,
-  seed = sample(1e+09, 1)
+  seed = sample(1e+09, 1),
+  ...
 )
 }
 \arguments{
@@ -32,7 +36,7 @@ mbm.predict(
 \item{LAg}{A vector of LAg values, one for each individual. Can be omitted.}
 
 \item{CD4}{A vector of CD4 values, one for each individual. These are the actual CD4+ T-cell concentrations, not the square-root transformed ones used in previous versions. 
-This value must be provided.}
+Can be omitted.}
 
 \item{pol}{A vector for the proportion of polymorphic sites in the HIV polymerase gene, one for each individual.
 This value must be provided.}
@@ -42,9 +46,15 @@ This value must be provided.}
 \item{prev.neg.time}{The amount of time in between an individual's positive HIV test and a previous negative test. 
 Use Inf or NA if no previous negative test is available.}
 
-\item{t.sam.delay}{A vector for the difference in time (in years (days/365.25)) between the dates of the positive test and when the biomarkers aside from CD4 were sampled.}
+\item{t.BED.delay}{A vector or matrix for the difference in time (in years (days/365.25)) between the dates of the positive test and when BED was sampled.}
 
-\item{t.CD4.delay}{A vector for the difference in time (in years (days/365.25)) between the dates of the positive test and when CD4 was sampled.}
+\item{t.LAg.delay}{A vector or matrix for the difference in time (in years (days/365.25)) between the dates of the positive test and when LAg was sampled.}
+
+\item{t.CD4.delay}{A vector or matrix for the difference in time (in years (days/365.25)) between the dates of the positive test and when CD4 was sampled.}
+
+\item{t.pol.delay}{A vector or matrix for the difference in time (in years (days/365.25)) between the dates of the positive test and when pol was sampled.}
+
+\item{t.pol2.delay}{A vector or matrix for the difference in time (in years (days/365.25)) between the dates of the positive test and when pol2 was sampled.}
 
 \item{mub}{A vector of length 12 for the means of the random effects parameters for the Multiple Biomarker Model.}
 
