@@ -226,31 +226,54 @@ sim.coal.phybreak <- function(tt,
   if(is.null(user_seqs)){
     #make sequences with seq-gen if none are provided
     #TODO how long does this take? could two processes try to do this at the same time?
-    tree_file <- paste0(tree_loc, "trees/tree_newick_", nInd, "_", sim_index, "_", seed, ".tree") #TODO make trees folder if it doesn't exist
-    seq_file <- paste0(tree_loc, "trees/seqs_", nInd, "_", sim_index, "_", seed, ".dat")
-    write(tree, file = tree_file) 
+    #tree_file <- paste0(tree_loc, "trees/tree_newick_", nInd, "_", sim_index, "_", seed, ".tree") #TODO make trees folder if it doesn't exist
+    #seq_file <- paste0(tree_loc, "trees/seqs_", nInd, "_", sim_index, "_", seed, ".dat")
+    #write(tree, file = tree_file) 
     if(mut_model == "env"){
       #envelope values
-      system(paste0("./seq-gen -m GTR -l 1000 -a .38 -i .3 -s .0083",
-                    " -r 1.71, 2.88, .535, .359, 2.37, .677", #upper triangle of rate matrix
-                    " -f .4627,.1474,.1598,.2302 -z ", seed, #nucleotide frequencies
-                    " < ", tree_file, " > ", seq_file))
+      #system(paste0("./seq-gen -m GTR -l 1000 -a .38 -i .3 -s .0083",
+      #              " -r 1.71, 2.88, .535, .359, 2.37, .677", #upper triangle of rate matrix
+      #              " -f .4627,.1474,.1598,.2302 -z ", seed, #nucleotide frequencies
+      #              " < ", tree_file, " > ", seq_file))
+      seqs_phyclust <- phyclust::seqgen(opts = paste0("-mGTR -l1000 -g4 -a0.38 -i0.3 -s0.0083",
+                                                      " -r1.71,2.88,0.535,0.359,2.37,0.677", #upper triangle of rate matrix
+                                                      " -f0.4627,0.1474,0.1598,0.2302 -or"),
+                                        newick.tree = tree)
     } else if(mut_model == "pol"){
       #pol values
-      system(paste0("./seq-gen -m GTR -l 1000 -g 4 -a .015 -i .255 -s .00241",
-                    " -r 1.09637, 23.97305, 0.46634, 0.00023, 13.74563, 1.00000", #upper triangle of rate matrix
-                    " -f 0.39110, 0.17228,0.21614,0.22048 -z ", seed, #nucleotide frequencies
-                    " < ", tree_file, " > ", seq_file))
+      #system(paste0("./seq-gen -m GTR -l 1000 -g 4 -a .015 -i .255 -s .00241",
+      #              " -r 1.09637, 23.97305, 0.46634, 0.00023, 13.74563, 1.00000", #upper triangle of rate matrix
+      #              " -f 0.39110, 0.17228,0.21614,0.22048 -z ", seed, #nucleotide frequencies
+      #              " < ", tree_file, " > ", seq_file))
+      seqs_phyclust <- phyclust::seqgen(opts = paste0("-mGTR -l1000 -g4 -a0.015 -i0.255 -s0.00241",
+                                                      " -r1.09637,23.97305,0.46634,0.00023,13.74563,1.00000", #upper triangle of rate matrix
+                                                      " -f0.39110,0.17228,0.21614,0.22048 -or"),
+                                        newick.tree = tree)
     }
     #system(paste0("./seq-gen -m GTR -l 1000 -s .001 -f .389,.165,.228,.219 -z ", seed, " < ", tree_file, " > ", seq_file))
     #https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3511177/
     
-    seqs <- as.matrix(read.table(seq_file))
+    #seqs <- as.matrix(read.table(seq_file))
     #remove first row
-    seqs <- seqs[-1,]
-    sequences <- tolower(t(simplify2array(strsplit(seqs[,2], split = ""))))
-    hosts <- simplify2array(strsplit(seqs[,1], split = "_"))[1,]
-    sample.names.seq <- seqs[,1]
+    #seqs <- seqs[-1,]
+    
+    #return(list(seqs, seqs_phyclust))
+    #return(seqs_phyclust)
+    seqs <- simplify2array(strsplit(seqs_phyclust[-1], split = " "))[2,]
+    sequences <- tolower(t(simplify2array(lapply(seqs, FUN = function(x) strsplit(x, split = "")[[1]]))))
+    sample.names.seq <- simplify2array(strsplit(seqs_phyclust[-1], split = " "))[1,]
+    
+    extract_hostname <- function(seq_name){
+      seq_name_components <- strsplit(seq_name, split = "_")[[1]]
+      nComponents <- length(seq_name_components)
+      hostname <- paste(seq_name_components[1:(nComponents-1)], collapse = "_")
+      return(hostname)
+    }
+    hosts <- sapply(sample.names.seq, FUN = extract_hostname)
+    
+    #sequences <- tolower(t(simplify2array(strsplit(seqs[,2], split = ""))))
+    #hosts <- simplify2array(strsplit(seqs[,1], split = "_"))[1,]
+    #sample.names.seq <- seqs[,1]
   } else{
     #use provided sequences
     sequences <- user_seqs

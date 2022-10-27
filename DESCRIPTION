@@ -28,7 +28,8 @@ Imports:
     sp,
     ggplot2,
     ggtext,
-    reshape2
+    reshape2,
+    phyclust
 Suggests:
     coda,
     phytools,
