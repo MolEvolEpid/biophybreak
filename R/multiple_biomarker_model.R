@@ -16,11 +16,22 @@
 #' @export
 
 sim.biomarkers <- function(t.inf, 
-                           mub, Sigmab, sigmae, 
+                           mub = NULL, Sigmab = NULL, sigmae = NULL, 
                            which.biomarkers = matrix(1, nrow = length(t.inf), ncol = 5), 
                            seed = sample(1e9, 1)){
   #set RNG seed 
   set.seed(seed)
+  
+  #load trained parameters if not specified
+  if(is.null(mub) && is.null(Sigmab) && is.null(sigmae)){
+    data("MBM_pars")
+    mub <- MBM_pars$mub
+    Sigmab <- MBM_pars$Sigmab
+    sigmae <- MBM_pars$sigmae
+  } else if(is.null(mub) || is.null(Sigmab) || is.null(sigmae)){
+    stop("mub, Sigmab, and sigmae must either all be specified or all null")
+  }
+  
   #number of individuals to simulate
   nInds <- length(t.inf)
   
@@ -114,14 +125,21 @@ sim.biomarkers <- function(t.inf,
 #' @param n.adapt The number of iterations to adapt the rjags MCMC model
 #' @param n.burn The number of iterations of burn-in for the rjags MCMC model
 #' @param n.iter The number of iterations of samples for the rjags MCMC model.
+#' @param prior.type The type of prior used for the time between infection and diagnosis in the multiple biomarker model.
+#' 1 indicates a gamma distribution with mean `inf.mean` years and standard deviation `inf.sd` years.
+#' 2 indicates a continuous uniform distribution with minimum 0 and maximum 12 years.
+#' 3 indicates a distribution for an individual that is HIV positive but has not developed AIDS symptoms, 
+#' assuming that AIDS symptoms develop after a length of time according to a gamma distribution with shape 3.349 and rate 0.327
+#' 4 indicates a user-supplied distribution from the parameter user.prior.pdf
 #' @param inf.mean The mean of the gamma distribution used for the prior distribution when there is no previous negative test. Default value is 2 years.
 #' @param inf.sd The mean of the gamma distribution used for the prior distribution when there is no previous negative test. Default value is 1.5 years.
 #' @param max.seroconvert.delay The maximum reasonable about of time that someone can be infected before an HIV test would be positive.
+# '@param u1.pdf A pdf to use as the prior distribution for the time between infection and diagnosis in the multiple biomarker model.
+#' It must be a list with x and y components corresponding to the time before diagnosis and probability density.
 #' @param output.raw If TRUE, the output will include all MCMC samples for the infection ages.
 #' @param seed The RNG seed to use.
-#' 
 #' @return The probability density of the infection times for each patient. 
-#'   "pdf" is a continous function and "pdf.num" is a density class object as produced by the density function.
+#'   "pdf" is a continuous function and "pdf.num" is a density class object as produced by the density function.
 #'   If output.raw is TRUE, "raw" is the matrix of MCMC samples of the infection ages for all individuals.
 #' @export
 
@@ -136,17 +154,29 @@ mbm.predict <- function(BED = rep(NA, length(pol)),
                         t.CD4.delay = NULL,
                         t.pol.delay = rep(0, length(pol)),
                         t.pol2.delay = NULL,
-                        mub, 
-                        Sigmab, 
-                        sigmae,
+                        mub = NULL, 
+                        Sigmab = NULL, 
+                        sigmae = NULL,
                         n.adapt = 1000, n.burn = 1000, n.iter = 1000, 
+                        prior.type = NULL,
                         inf.mean = 2, inf.sd = 1.5, 
                         max.seroconvert.delay = 2/12,
+                        u1.pdf = NULL,
                         output.raw = FALSE,
                         seed = sample(1e9, 1),
                         ...){
   #set RNG seed 
   set.seed(seed)
+  
+  #load trained parameters if not specified
+  if(is.null(mub) && is.null(Sigmab) && is.null(sigmae)){
+    data("MBM_pars")
+    mub <- MBM_pars$mub
+    Sigmab <- MBM_pars$Sigmab
+    sigmae <- MBM_pars$sigmae
+  } else if(is.null(mub) || is.null(Sigmab) || is.null(sigmae)){
+    stop("mub, Sigmab, and sigmae must either all be specified or all null")
+  }
   
   #convert legacy input
   addn.input <- list(...)
@@ -258,6 +288,20 @@ mbm.predict <- function(BED = rep(NA, length(pol)),
   #  stop("Invalid output type. Must be continuous, numeric, or both.")
   #}
   
+  #parse prior distribution type
+  if(is.null(prior.type)){
+    prior.type <- rep(1L, nInds)
+  } else if(length(prior.type) != nInds){
+    stop("Length of prior.type must be equal to the number of individuals")
+  } else if(any(!(prior.type %in% c(1,2,3,4)))){
+    stop("prior.type values must be 1, 2, 3, or 4")
+  }
+  #use one-hot encoding to set up a switch for the prior
+  priors <- matrix(0, nrow = nInds, ncol = 4)
+  for(i in seq_len(nInds)){
+    priors[i,prior.type[i]] <- 1
+  }
+  
   #modify priors based on previous negative test
   
   #change mean and sd to shape and rate
@@ -292,6 +336,64 @@ mbm.predict <- function(BED = rep(NA, length(pol)),
   #change NAs in max.uninf.time to Inf
   max.uninf.time[is.na(max.uninf.time)] <- Inf
   
+  #create uninformative prior distribution for time between infection and diagnosis
+  #for patients HIV positive but without AIDS
+  #"survival gamma"
+  sg.shape <- 3.349
+  sg.rate <- .3270 #gamma parameters for the amount of time to develop AIDS
+  sg.step.size <- .05
+  ts <- seq(0, 50, by = sg.step.size)
+  sg_pdf <- (1 - pgamma(ts, shape = sg.shape, rate = sg.rate))/(sg.shape/sg.rate)
+  
+  sg_cdf <- rep(0, length = length(sg_pdf))
+  for(i in 2:length(sg_cdf)){
+    sg_cdf[i] <- sg_cdf[i-1] + mean(sg_pdf[i-1],sg_pdf[i])*sg.step.size #trapezoid rule
+  }
+  sg_cdf <- sg_cdf/max(sg_cdf)
+  
+  #find truncation value for icdf sampling
+  sg_cdf_fn <- approxfun(ts, sg_cdf, yright = 1) #function
+  sg_upper <- sg_cdf_fn(max.uninf.time)
+  
+  #process user-input prior distribution
+  u1_pdf <- u1.pdf
+  if(!is.null(u1_pdf)){
+    #check to make sure it has x and y components
+    if(!is.numeric(u1_pdf$x) || !is.numeric(u1_pdf$y)){
+      stop("If provided, u1.pdf must have x and y components")
+    } else if(length(u1_pdf$x) != length(u1_pdf$y)){
+      stop("x and y components of u1.pdf must be the same length")
+    }
+  } else{
+    #placeholder uniform distribution if not provided
+    u1_pdf <- list(x = c(0, 10), y = c(1/10, 1/10))
+  }
+  
+  #find cdf
+  u1_cdf <- rep(0, length = length(u1_pdf$y))
+  for(i in 2:length(u1_cdf)){
+    u1_cdf[i] <- u1_cdf[i-1] + mean(u1_pdf$y[i-1],u1_pdf$y[i])*(u1_pdf$x[i]-u1_pdf$x[i-1]) #trapezoid rule
+  }
+  u1_cdf <- u1_cdf/max(u1_cdf)
+  
+  #collapse to unique cdf values
+  u1_uniques <- sapply(unique(u1_cdf), 
+                       FUN = function(unique_cdf_y, cdf_y) which(unique_cdf_y == cdf_y)[1], 
+                       cdf_y = u1_cdf) #first of each value
+  
+  u1_cdf <- u1_cdf[u1_uniques]
+  u1_t_ind <- u1_pdf$x[u1_uniques]
+  
+  #print(length(unique(u1_cdf)))
+  #find truncation value for icdf sampling
+  u1_cdf_fn <- approxfun(u1_t_ind, u1_cdf, yright = 1) #function
+  u1_upper <- u1_cdf_fn(max.uninf.time)
+  
+  
+  #add right values
+  #u1_t_ind <- c(u1_t_ind, 100)
+  #u1_cdf <- c(u1_cdf, 1)
+  
   input_data <- list(np = nInds, mp = mp, 
                      mub = mub, Precb = solve(Sigmab), prece = 1/sigmae,
                      t_bed_delay = t.bed.delay.test, 
@@ -304,7 +406,10 @@ mbm.predict <- function(BED = rep(NA, length(pol)),
                      cd4_test = cd4.test/24, 
                      pol_test = pol.test*200,
                      pol2_test = pol2.test*200, 
-                     prior_shape = trunc.shape, prior_rate = trunc.rate, neg_time = max.uninf.time)
+                     priors = priors,
+                     prior_shape = trunc.shape, prior_rate = trunc.rate, neg_time = max.uninf.time,
+                     sg_cdf = sg_cdf, sg_t_ind = ts, sg_upper = sg_upper, 
+                     u1_cdf = u1_cdf, u1_t_ind = u1_t_ind, u1_upper = u1_upper)
   
   #prediction model
   mbm_predict <- "
@@ -312,12 +417,16 @@ mbm.predict <- function(BED = rep(NA, length(pol)),
     #####Prediction########
     #prior for age of infection
     for(i in 1:np){
-      #t_pred[i] ~ dunif(0,12)
       #t_pred[i] ~ dgamma(16/9, 0.75) #slightly higher mean
       #t_pred[i] ~ dgamma(16/9, 8/9) #corresponds to mean of 2 with stdev 1.5
-      t_pred[i] ~ dgamma(prior_shape[i], prior_rate[i]) T(,neg_time[i])
-      #t_unif[i] ~ dunif(0,1)
-      #t_pred[i] <- interp.lin(t_unif[i], sg_cdf, t_ind) #use inverse transform sampling to generate values from desired prior
+      t_pred1[i] ~ dgamma(prior_shape[i], prior_rate[i]) T(,neg_time[i])
+      t_pred2[i] ~ dunif(0,min(12, neg_time[i]))
+      t_unif_sg[i] ~ dunif(0,sg_upper[i])
+      t_pred3[i] <- interp.lin(t_unif_sg[i], sg_cdf, sg_t_ind) #use inverse transform sampling to generate values from desired prior
+      t_unif_u1[i] ~ dunif(0,u1_upper[i]) #first user-input function
+      t_pred4[i] <- interp.lin(t_unif_u1[i], u1_cdf, u1_t_ind) #use inverse transform sampling to generate values from desired prior
+      t_pred[i] <- step(-0.5+priors[i,1])*t_pred1[i] + step(-0.5+priors[i,2])*t_pred2[i] +
+                   step(-0.5+priors[i,3])*t_pred3[i] + step(-0.5+priors[i,4])*t_pred4[i]
     }
     
     #parameters for predictions

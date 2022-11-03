@@ -15,6 +15,8 @@
 #'@param seq_dates A list of vectors for the sample dates of the HIV sequences
 #'@param seq A list of HIV sequences (or a list of lists of sequences) for each patient in character or DNAbin format
 #'@param seq_names The names of the sequences
+#'@param pol_override A list of vectors for values for the polymorphism count if they have already been calculated externally. 
+#'These values will replace the pol values calculated by this function.
 #'@param pol2_dates A list of vectors for the sample dates of the pol2 values
 #'@param pol A list of vectors for values for the pol2 value
 #'@param VL_dates A list of vectors for the sample dates of the viral load
@@ -31,6 +33,14 @@
 #'@param death_date The date of death of each patient if the patient has died
 #'@param date_format A character string specifying the format of the dates (to be passed to as.Date())
 #'@param find_infection_age_distributions Whether or not to run the multiple biomarker model (MBM) on the data
+#'@param prior.type The type of prior used for the time between infection and diagnosis in the multiple biomarker model.
+#'1 indicates a gamma distribution with mean 2 years and standard deviation 1.5 years.
+#'2 indicates a continuous uniform distribution with minimum 0 and maximum 12 years.
+#'3 indicates a distribution for an individual that is HIV positive but has not developed AIDS symptoms, 
+#'assuming that AIDS symptoms develop after a length of time according to a gamma distribution with shape 3.349 and rate 0.327
+#'4 indicates a user-supplied distribution from the parameter user.prior.pdf
+#'@param user.prior.pdf A pdf to use as the prior distribution for the time between infection and diagnosis in the multiple biomarker model.
+#'It must be a list with x and y components corresponding to the time before diagnosis and probability density.
 #'@param n.adapt Number of adaptation iterations if the MBM is run
 #'@param n.burn Number of burn-in iterations if the MBM is run
 #'@param n.iter Number of sampling iterations if the MBM is run
@@ -51,6 +61,7 @@ prepare.HIV.data <- function(patient_ID,
                              seq_dates,
                              seqs,
                              seq_names,
+                             pol_override = NULL,
                              pol2_dates = NULL,
                              pol2 = NULL, 
                              VL_dates = NULL,
@@ -66,11 +77,16 @@ prepare.HIV.data <- function(patient_ID,
                              death_date = NULL,
                              date_format = "%Y-%m-%d",
                              find_infection_age_distributions = FALSE,
+                             prior.type = 1,
+                             user.prior.pdf = list(x = c(0, 10), y = c(1/10, 1/10)),
                              n.adapt = 1e4, 
                              n.burn = 1e5, 
                              n.iter = 1e6,
                              seed = sample(2^31-1, 1),
                              ...){
+  
+  #find total number of individuals
+  total_inds <- length(patient_ID)
   
   #check inputs
   
@@ -81,27 +97,27 @@ prepare.HIV.data <- function(patient_ID,
   if(!is.null(last_neg_test_date)){
     last_neg_test_date <- as.double(as.Date(last_neg_test_date, date_format))/365.25 + 1970
   } else{
-    last_neg_test_date <- rep(NA, length(patient_ID))
+    last_neg_test_date <- rep(NA, total_inds)
   }
   if(!is.null(first_pos_test_date)){
     first_pos_test_date <- as.double(as.Date(first_pos_test_date, date_format))/365.25 + 1970
   } else{
-    first_pos_test_date <- rep(NA, length(patient_ID))
+    first_pos_test_date <- rep(NA, total_inds)
   }
   if(!is.null(ART_start_date)){
     ART_start_date <- as.double(as.Date(ART_start_date, date_format))/365.25 + 1970
   } else{
-    ART_start_date <- rep(NA, length(patient_ID))
+    ART_start_date <- rep(NA, total_inds)
   }
   if(!is.null(aids_diagnosis_date)){
     aids_diagnosis_date <- as.double(as.Date(aids_diagnosis_date, date_format))/365.25 + 1970
   } else{
-    aids_diagnosis_date <- rep(NA, length(patient_ID))
+    aids_diagnosis_date <- rep(NA, total_inds)
   }
   if(!is.null(death_date)){
     death_date <- as.double(as.Date(death_date, date_format))/365.25 + 1970
   } else{
-    death_date <- rep(NA, length(patient_ID))
+    death_date <- rep(NA, total_inds)
   }
   
   #BED sample dates and values
@@ -110,12 +126,12 @@ prepare.HIV.data <- function(patient_ID,
                         FUN = function(x, date_format) as.double(as.Date(x, date_format))/365.25+1970, 
                         date_format = date_format)
   } else{
-    BED_dates <- as.list(rep(NA, length(patient_ID)))
+    BED_dates <- as.list(rep(NA, total_inds))
   }
   if(!is.null(BED)){
     BED <- as.list(BED)
   } else{
-    BED <- as.list(rep(NA, length(patient_ID)))
+    BED <- as.list(rep(NA, total_inds))
   }
   
   #LAg sample dates and values
@@ -124,12 +140,12 @@ prepare.HIV.data <- function(patient_ID,
                         FUN = function(x, date_format) as.double(as.Date(x, date_format))/365.25+1970, 
                         date_format = date_format)
   } else{
-    LAg_dates <- as.list(rep(NA, length(patient_ID)))
+    LAg_dates <- as.list(rep(NA, total_inds))
   }
   if(!is.null(LAg)){
     LAg <- as.list(LAg)
   } else{
-    LAg <- as.list(rep(NA, length(patient_ID)))
+    LAg <- as.list(rep(NA, total_inds))
   }
   
   #CD4 sample dates and values
@@ -138,12 +154,12 @@ prepare.HIV.data <- function(patient_ID,
                         FUN = function(x, date_format) as.double(as.Date(x, date_format))/365.25+1970, 
                         date_format = date_format)
   } else{
-    CD4_dates <- as.list(rep(NA, length(patient_ID)))
+    CD4_dates <- as.list(rep(NA, total_inds))
   }
   if(!is.null(CD4)){
     CD4 <- as.list(CD4)
   } else{
-    CD4 <- as.list(rep(NA, length(patient_ID)))
+    CD4 <- as.list(rep(NA, total_inds))
   }
   
   #sequence sample dates and values
@@ -152,12 +168,12 @@ prepare.HIV.data <- function(patient_ID,
                         FUN = function(x, date_format) as.double(as.Date(x, date_format))/365.25+1970, 
                         date_format = date_format)
   } else{
-    seq_dates <- as.list(rep(NA, length(patient_ID)))
+    stop("seq_dates must be provided")
   }
   if(!is.null(seq)){
     seq <- as.list(seq)
   } else{
-    seq <- as.list(rep("N", length(patient_ID)))
+    seq <- as.list(rep("N", total_inds))
     warning("No sequences found. Using blank sequences.")
   }
   
@@ -167,12 +183,12 @@ prepare.HIV.data <- function(patient_ID,
                          FUN = function(x, date_format) as.double(as.Date(x, date_format))/365.25+1970, 
                          date_format = date_format)
   } else{
-    pol2_dates <- as.list(rep(NA, length(patient_ID)))
+    pol2_dates <- as.list(rep(NA, total_inds))
   }
   if(!is.null(pol2)){
     pol2 <- as.list(pol2)
   } else{
-    pol2 <- as.list(rep(NA, length(patient_ID)))
+    pol2 <- as.list(rep(NA, total_inds))
   }
   
   #viral load sample dates and values
@@ -181,12 +197,54 @@ prepare.HIV.data <- function(patient_ID,
                        FUN = function(x, date_format) as.double(as.Date(x, date_format))/365.25+1970, 
                        date_format = date_format)
   } else{
-    VL_dates <- as.list(rep(NA, length(patient_ID)))
+    VL_dates <- as.list(rep(NA, total_inds))
   }
   if(!is.null(VL)){
     VL <- as.list(VL)
   } else{
-    VL <- as.list(rep(NA, length(patient_ID)))
+    VL <- as.list(rep(NA, total_inds))
+  }
+  
+  #cluster_ID
+  if(!is.null(cluster_ID)){
+    cluster_ID <- as.character(cluster_ID)
+  } else{
+    stop("cluster_ID must be provided")
+  }
+  
+  #gender
+  if(!is.null(gender)){
+    gender <- as.character(gender)
+  } else{
+    gender <- as.character(rep(NA, total_inds))
+  }
+  
+  #age at the time of sequence samples
+  if(!is.null(age_at_sampling)){
+    age_at_sampling <- as.list(age_at_sampling)
+  } else{
+    age_at_sampling <- as.list(rep(NA, total_inds))
+  }
+  
+  #birth location
+  if(!is.null(birth_location)){
+    birth_location <- as.character(birth_location)
+  } else{
+    birth_location <- as.character(rep(NA, total_inds))
+  }
+  
+  #suspected infection location
+  if(!is.null(suspected_infection_location)){
+    suspected_infection_location <- as.character(suspected_infection_location)
+  } else{
+    suspected_infection_location <- as.character(rep(NA, total_inds))
+  }
+  
+  #risk group
+  if(!is.null(risk_group)){
+    risk_group <- as.character(risk_group)
+  } else{
+    risk_group <- as.character(rep(NA, total_inds))
   }
   
   #use the earliest sampled biomarker as the first positive date if it is blank or after biomarker measurements
@@ -203,10 +261,14 @@ prepare.HIV.data <- function(patient_ID,
   
   #calculate polymorphism count from sequences
   #collapse inner lists in seqs
-  seqs <- lapply(seqs, FUN = function(x) if(is.list(x)) do.call("rbind", x) else x)
+  seqs <- lapply(seqs, FUN = function(x) if(is.list(x) & class(x) != "phyDat") do.call("rbind", x) else x)
   #function to calculate polymorphism counts
   calculate_pol <- function(sequences){
-    nseq <- dim(sequences)[1]
+    if(is.null(dim(sequences))){
+      nseq <- 1
+    } else{
+      nseq <- dim(sequences)[1]
+    }
     length_seq <- integer(length = nseq)
     pol <- double(length = nseq)
     for(i in seq_len(nseq)){
@@ -221,6 +283,11 @@ prepare.HIV.data <- function(patient_ID,
   length_and_pol <- lapply(seqs, FUN = calculate_pol)
   seq_length <- lapply(length_and_pol, FUN = function(x) x$length)
   pol <- lapply(length_and_pol, FUN = function(x) x$pol)
+  
+  #override pol values if provided
+  if(!is.null(pol_override)){
+    pol <- as.list(pol_override)
+  }
   
   #find number of sequences per individual
   nSeq <- sapply(pol, FUN = length)
@@ -296,7 +363,7 @@ prepare.HIV.data <- function(patient_ID,
                    VL_dates = I(VL_dates),
                    VL = I(VL),
                    VL_qc = I(VL_qc),
-                   ART_cutoff_delay_years = rep(ART_cutoff_delay_years, length = length(patient_ID)), #in days
+                   ART_cutoff_delay_years = rep(ART_cutoff_delay_years, length = total_inds), #in days
                    cluster_ID = cluster_ID,
                    gender = gender,
                    age_at_sampling = I(age_at_sampling),
@@ -318,7 +385,9 @@ prepare.HIV.data <- function(patient_ID,
   
   if(find_infection_age_distributions){
     #find probability distributions for the time between infection and diagnosis
-    infection_age_dists <- run.mbm(df, n.adapt = n.adapt, n.burn = n.burn, n.iter = n.iter, overall.seed = seed)
+    infection_age_dists <- run.mbm(df, n.adapt = n.adapt, n.burn = n.burn, n.iter = n.iter, 
+                                   prior.type = prior.type, user.prior.pdf = user.prior.pdf,
+                                   overall.seed = seed)
     
     #put distributions into dataframe
     #distributions from diagnosis
@@ -336,10 +405,20 @@ prepare.HIV.data <- function(patient_ID,
 #'@param n.adapt Number of iterations for model adaptation
 #'@param n.burn Number of burn-in iterations
 #'@param n.iter Number of sampling iterations
+#'#'@param prior.type The type of prior used for the time between infection and diagnosis in the multiple biomarker model.
+#'1 indicates a gamma distribution with mean 2 years and standard deviation 1.5 years.
+#'2 indicates a continuous uniform distribution with minimum 0 and maximum 12 years.
+#'3 indicates a distribution for an individual that is HIV positive but has not developed AIDS symptoms, 
+#'assuming that AIDS symptoms develop after a length of time according to a gamma distribution with shape 3.349 and rate 0.327
+#'4 indicates a user-supplied distribution from the parameter user.prior.pdf
+#'@param user.prior.pdf A pdf to use as the prior distribution for the time between infection and diagnosis in the multiple biomarker model.
+#'It must be a list with x and y components corresponding to the time before diagnosis and probability density.
 #'@param overall.seed RNG seed to use to generate other RNG seeds
 #'@return Lists for the infection age distributions both in terms of time before diagnosis and time before the first sequence
 #'@export
-run.mbm <- function(df, n.adapt = 1000, n.burn = 1000, n.iter = 1000, overall.seed = sample(2^31-1, 1)){
+run.mbm <- function(df, n.adapt = 1000, n.burn = 1000, n.iter = 1000, 
+                    prior.type = 1, user.prior.pdf = list(x = c(0, 10), y = c(1/10, 1/10)),
+                    overall.seed = sample(2^31-1, 1)){
   #find number of individuals
   nInds <- nrow(df)
   
@@ -409,9 +488,11 @@ run.mbm <- function(df, n.adapt = 1000, n.burn = 1000, n.iter = 1000, overall.se
                                             mub = rep(list(MBM_pars$mub), nInds), 
                                             Sigmab = rep(list(MBM_pars$Sigmab), nInds), 
                                             sigmae = rep(list(MBM_pars$sigmae), nInds),
-                                            n.adapt = n.adapt, n.burn = n.burn, n.iter = n.iter, 
+                                            n.adapt = n.adapt, n.burn = n.burn, n.iter = n.iter,
+                                            prior.type = prior.type,
                                             inf.mean = 2, inf.sd = 1.5, 
                                             max.seroconvert.delay = 2/12,
+                                            u1.pdf = list(user.prior.pdf),
                                             seed = seeds,
                                             output.raw = FALSE, 
                                             SIMPLIFY = FALSE, 
@@ -497,9 +578,25 @@ prepare.biophybreak.data <- function(df,
   nInds <- sapply(clust_indiv_indices, FUN = length)
   
   #get data into right format for phybreakdata function
+  process_seqs <- function(indices, seqs){
+    if(is.list(seqs[indices]) && (class(seqs[[1]]) != "phyDat") && (class(seqs[[1]][[1]]) != "phyDat")){
+      do.call("rbind", seqs[indices]) 
+    } else if(class(seqs[[1]]) == "phyDat"){
+      seqs <- lapply(seqs, as.character)
+      do.call("rbind", seqs[indices]) 
+    } else if(class(seqs[[1]][[1]]) != "phyDat"){
+      #not sure this will work correctly in all situations
+      seqs <- rapply(seqs, as.character)
+      seqs <- lapply(seqs, FUN = function(x) if(is.list(x)) do.call("rbind", x) else x)
+      seqs <- do.call("rbind", seqs[indices])
+    } else{
+      seqs[indices]
+    } 
+  }
   sequences <- lapply(clust_indiv_indices, 
-                      FUN = function(indices, seqs) if(is.list(seqs[indices])) do.call("rbind", seqs[indices]) else seqs[indices],
+                      FUN = process_seqs,
                       seqs = df$seqs)
+  #return(sequences)
   #sequence sample times
   seq_sample_times <- lapply(clust_indiv_indices,
                              FUN = function(indices, x) unname(unlist(x[indices])),

@@ -18,6 +18,7 @@ prepare.HIV.data(
   seq_dates,
   seqs,
   seq_names,
+  pol_override = NULL,
   pol2_dates = NULL,
   pol2 = NULL,
   VL_dates = NULL,
@@ -33,6 +34,8 @@ prepare.HIV.data(
   death_date = NULL,
   date_format = "\%Y-\%m-\%d",
   find_infection_age_distributions = FALSE,
+  prior.type = 1,
+  user.prior.pdf = list(x = c(0, 10), y = c(1/10, 1/10)),
   n.adapt = 10000,
   n.burn = 1e+05,
   n.iter = 1e+06,
@@ -66,6 +69,9 @@ or if the first positive test date is unavailable.}
 
 \item{seq_names}{The names of the sequences}
 
+\item{pol_override}{A list of vectors for values for the polymorphism count if they have already been calculated externally. 
+These values will replace the pol values calculated by this function.}
+
 \item{pol2_dates}{A list of vectors for the sample dates of the pol2 values}
 
 \item{VL_dates}{A list of vectors for the sample dates of the viral load}
@@ -94,6 +100,16 @@ after which biomarker values should be disregarded}
 \item{date_format}{A character string specifying the format of the dates (to be passed to as.Date())}
 
 \item{find_infection_age_distributions}{Whether or not to run the multiple biomarker model (MBM) on the data}
+
+\item{prior.type}{The type of prior used for the time between infection and diagnosis in the multiple biomarker model.
+1 indicates a gamma distribution with mean 2 years and standard deviation 1.5 years.
+2 indicates a continuous uniform distribution with minimum 0 and maximum 12 years.
+3 indicates a distribution for an individual that is HIV positive but has not developed AIDS symptoms, 
+assuming that AIDS symptoms develop after a length of time according to a gamma distribution with shape 3.349 and rate 0.327
+4 indicates a user-supplied distribution from the parameter user.prior.pdf}
+
+\item{user.prior.pdf}{A pdf to use as the prior distribution for the time between infection and diagnosis in the multiple biomarker model.
+It must be a list with x and y components corresponding to the time before diagnosis and probability density.}
 
 \item{n.adapt}{Number of adaptation iterations if the MBM is run}
 

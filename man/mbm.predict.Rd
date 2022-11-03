@@ -16,15 +16,17 @@ mbm.predict(
   t.CD4.delay = NULL,
   t.pol.delay = rep(0, length(pol)),
   t.pol2.delay = NULL,
-  mub,
-  Sigmab,
-  sigmae,
+  mub = NULL,
+  Sigmab = NULL,
+  sigmae = NULL,
   n.adapt = 1000,
   n.burn = 1000,
   n.iter = 1000,
+  prior.type = NULL,
   inf.mean = 2,
   inf.sd = 1.5,
   max.seroconvert.delay = 2/12,
+  u1.pdf = NULL,
   output.raw = FALSE,
   seed = sample(1e+09, 1),
   ...
@@ -68,11 +70,19 @@ Use Inf or NA if no previous negative test is available.}
 
 \item{n.iter}{The number of iterations of samples for the rjags MCMC model.}
 
+\item{prior.type}{The type of prior used for the time between infection and diagnosis in the multiple biomarker model.
+1 indicates a gamma distribution with mean `inf.mean` years and standard deviation `inf.sd` years.
+2 indicates a continuous uniform distribution with minimum 0 and maximum 12 years.
+3 indicates a distribution for an individual that is HIV positive but has not developed AIDS symptoms, 
+assuming that AIDS symptoms develop after a length of time according to a gamma distribution with shape 3.349 and rate 0.327
+4 indicates a user-supplied distribution from the parameter user.prior.pdf}
+
 \item{inf.mean}{The mean of the gamma distribution used for the prior distribution when there is no previous negative test. Default value is 2 years.}
 
 \item{inf.sd}{The mean of the gamma distribution used for the prior distribution when there is no previous negative test. Default value is 1.5 years.}
 
-\item{max.seroconvert.delay}{The maximum reasonable about of time that someone can be infected before an HIV test would be positive.}
+\item{max.seroconvert.delay}{The maximum reasonable about of time that someone can be infected before an HIV test would be positive.
+It must be a list with x and y components corresponding to the time before diagnosis and probability density.}
 
 \item{output.raw}{If TRUE, the output will include all MCMC samples for the infection ages.}
 
@@ -80,7 +90,7 @@ Use Inf or NA if no previous negative test is available.}
 }
 \value{
 The probability density of the infection times for each patient. 
-  "pdf" is a continous function and "pdf.num" is a density class object as produced by the density function.
+  "pdf" is a continuous function and "pdf.num" is a density class object as produced by the density function.
   If output.raw is TRUE, "raw" is the matrix of MCMC samples of the infection ages for all individuals.
 }
 \description{

@@ -6,9 +6,9 @@
 \usage{
 sim.biomarkers(
   t.inf,
-  mub,
-  Sigmab,
-  sigmae,
+  mub = NULL,
+  Sigmab = NULL,
+  sigmae = NULL,
   which.biomarkers = matrix(1, nrow = length(t.inf), ncol = 5),
   seed = sample(1e+09, 1)
 )

@@ -9,6 +9,8 @@ run.mbm(
   n.adapt = 1000,
   n.burn = 1000,
   n.iter = 1000,
+  prior.type = 1,
+  user.prior.pdf = list(x = c(0, 10), y = c(1/10, 1/10)),
   overall.seed = sample(2^31 - 1, 1)
 )
 }
@@ -19,7 +21,16 @@ run.mbm(
 
 \item{n.burn}{Number of burn-in iterations}
 
-\item{n.iter}{Number of sampling iterations}
+\item{n.iter}{Number of sampling iterations
+#'@param prior.type The type of prior used for the time between infection and diagnosis in the multiple biomarker model.
+1 indicates a gamma distribution with mean 2 years and standard deviation 1.5 years.
+2 indicates a continuous uniform distribution with minimum 0 and maximum 12 years.
+3 indicates a distribution for an individual that is HIV positive but has not developed AIDS symptoms, 
+assuming that AIDS symptoms develop after a length of time according to a gamma distribution with shape 3.349 and rate 0.327
+4 indicates a user-supplied distribution from the parameter user.prior.pdf}
+
+\item{user.prior.pdf}{A pdf to use as the prior distribution for the time between infection and diagnosis in the multiple biomarker model.
+It must be a list with x and y components corresponding to the time before diagnosis and probability density.}
 
 \item{overall.seed}{RNG seed to use to generate other RNG seeds}
 }
