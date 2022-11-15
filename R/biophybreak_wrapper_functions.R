@@ -800,6 +800,11 @@ run.biophybreak <- function(inputs,
                  mixed = mixed,
                  run_name = inputs$run_name,
                  time = time)
-  if(save) save(output, file = paste0(outdir, "/", inputs$run_name, ".Rdata"))
+  if(save){
+    #save final file
+    save(output, file = paste0(outdir, "/", inputs$run_name, ".Rdata"))
+    #remove partial run file
+    file.remove(paste0(outdir, "/partial_", inputs$run_name, ".Rdata"))
+  } 
   return(output)
 }
