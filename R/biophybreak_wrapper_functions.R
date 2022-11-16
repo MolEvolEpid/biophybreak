@@ -389,11 +389,32 @@ prepare.HIV.data <- function(patient_ID,
                                    prior.type = prior.type, user.prior.pdf = user.prior.pdf,
                                    overall.seed = seed)
     
+    #find pdf and cdf in terms of real time
+    cdfs <- lapply(infection_age_dists$infection_age_dists_diag, FUN = function(dist){find_cdf(-rev(dist$x), rev(dist$y))})
+    real_times <- mapply(FUN = function(diag, dist){rev(diag - dist$x)}, 
+                       diag = df$first_pos_test_date_adj, dist = infection_age_dists$infection_age_dists_diag, SIMPLIFY = FALSE)
+    #put times and (forward time) cdfs together
+    cdf <- vector(mode = "list", length = length(cdfs))
+    for(i in seq_along(cdfs)){
+      cdf[[i]]$x <- real_times[[i]]
+      cdf[[i]]$y <- cdfs[[i]]
+    }
+    #put times and (forward time) pdfs together
+    pdf <- vector(mode = "list", length = length(cdfs))
+    for(i in seq_along(cdfs)){
+      pdf[[i]]$x <- real_times[[i]]
+      pdf[[i]]$y <- rev(infection_age_dists$infection_age_dists_diag[[i]]$y)
+    }
+    
     #put distributions into dataframe
     #distributions from diagnosis
     df$infection_age_dists_diag <- I(infection_age_dists$infection_age_dists_diag)
     #distributions from first sequence
     df$infection_age_dists_seq <- I(infection_age_dists$infection_age_dists_seq)
+    #forwards, real time pdf
+    df$pdf <- I(pdf)
+    #forwards, real time cdf
+    df$cdf <- I(cdf)
   }
   
   return(df)
