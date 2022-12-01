@@ -291,10 +291,12 @@ mbm.predict <- function(BED = rep(NA, length(pol)),
   #parse prior distribution type
   if(is.null(prior.type)){
     prior.type <- rep(1L, nInds)
-  } else if(length(prior.type) != nInds){
-    stop("Length of prior.type must be equal to the number of individuals")
   } else if(any(!(prior.type %in% c(1,2,3,4)))){
     stop("prior.type values must be 1, 2, 3, or 4")
+  } else if(length(prior.type) == 1){
+    prior.type <- rep(prior.type, nInds)
+  } else if(length(prior.type) != nInds){
+    stop("Length of prior.type must be equal to the number of individuals")
   }
   #use one-hot encoding to set up a switch for the prior
   priors <- matrix(0, nrow = nInds, ncol = 4)
