@@ -151,3 +151,113 @@ infection.distributions.plot <- function(df,
   gridExtra::grid.arrange(p1, p2, nrow = 2, heights = c(1, 0.2))
   #dev.off()
 }
+
+#'@title Plot descriptive/demographics statistics
+#'@description Function to plot descriptive and demographic statistics of a dataset like gender and birth location distributions
+#'@param df A data frame containing infection time distributions as in the output from prepare.HIV.data 
+#'with find_infection_age_distributions = TRUE.
+#'@param max_groups The maximum number of birth or suspected transmission locations to be plotting
+#'before starting to group less common locations into "other"
+#'@param save_plots Whether or not to save the plots as pdfs
+#'@param run_set_title The first part of the file names if plots are saved
+#'@param width Width of pdf outputs if plots are saved
+#'@param height Height of pdf outputs if plots are saved
+#'@export
+descriptive.plots <- function(df, 
+                              max_groups = 10, 
+                              save_plots = FALSE, 
+                              run_set_title = "1", 
+                              width = 9, 
+                              height = 5){
+  #find names of all clusters
+  cluster_names <- unique(df$cluster_ID)
+  
+  #find number of clusters
+  nClust <- length(cluster_names)
+  
+  #split dataframe into clusters
+  df_split <- vector(mode = "list", length = nClust)
+  for(i in seq_len(nClust)){
+    df_split[[i]] <- df[df$cluster_ID == cluster_names[i],]
+  }
+  
+  #find cluster sizes
+  nInds <- sapply(df_split, FUN = function(x) dim(x)[1])
+  
+  #find proportion of males in each cluster
+  prop_male <- sapply(df_split, FUN = function(x) mean(x$gender == "M"))
+  
+  #proportion of swedish born people
+  prop_swe <- sapply(df_split, FUN = function(x) mean(x$birth_location == "SWE"))
+  
+  if(save_plots) pdf(file = paste0(run_set_title, "_gender_dist.pdf"), width = width, height = height)
+  plot(ggplot2::ggplot(data = data.frame(dist = prop_male), ggplot2::aes(x = dist)) + 
+         ggplot2::geom_bar(stat = "count") +
+         ggplot2::xlab("Proportion Male") +
+         ggplot2::ylab("Number of Clusters") +
+         ggplot2::theme_bw())
+  if(save_plots) dev.off()
+  
+  if(save_plots) pdf(file = paste0(run_set_title, "_gender_dist_clust_size.pdf"), width = width, height = height)
+  plot(prop_male+rnorm(nClust, 0, .015), 
+       nInds+(nInds*rnorm(nClust, 0, .04)), 
+       pch = 16, col = "#00000060", 
+       log = 'y',
+       xlab = "Proportion Male", ylab = "Number of Individuals in Cluster",
+       yaxt = 'n')
+  axis(2, at = 2^(0:7))
+  if(save_plots) dev.off()
+  
+  if(save_plots) pdf(file = paste0(run_set_title, "_risk_dist.pdf"), width = width, height = height)
+  plot(ggplot2::ggplot(df, ggplot2::aes(risk_group)) + 
+         ggplot2::geom_bar(stat = "count") +
+         ggplot2::xlab("Risk Group") +
+         ggplot2::ylab("Number of Individuals") +
+         ggplot2::theme_bw())
+  if(save_plots) dev.off()
+  
+  #turn "NA"s into "Unknown" (maybe this is not safe if a dataset uses "NA" for "North America"?)
+  df$birth_location[df$birth_location == "NA"] <- "unknown"
+  df$suspected_infection_location[df$suspected_infection_location == "NA"] <- "unknown"
+  
+  #maximum number of groups in birth location and transmission location breakdown
+  #max_groups <- 10
+  #find birth locations and group locations with small numbers of individuals
+  birth_table <- table(df$birth_location)
+  #find cutoff value for pooling locations with smaller numbers of individuals
+  if(length(birth_table) <= max_groups){
+    birth_cutoff_count <- 0
+  } else{
+    birth_cutoff_count <- sort(birth_table[names(birth_table) != "unknown"], decreasing = TRUE)[max_groups]
+  }
+  other_birth_names <- c(names(which(birth_table <= birth_cutoff_count)), "unknown")
+  birth_loc_cutoff <- df$birth_location
+  birth_loc_cutoff[which(birth_loc_cutoff %in% other_birth_names)] <- "other"
+  
+  if(save_plots) pdf(file = paste0(run_set_title, "_birth_locs.pdf"), width = width, height = height)
+  plot(ggplot2::ggplot(data = data.frame(b = birth_loc_cutoff), ggplot2::aes(x = b)) + 
+         ggplot2::geom_bar(stat = "count") +
+         ggplot2::xlab("Birth Location") + 
+         ggplot2::ylab("Number of Individuals") + 
+         ggplot2::theme_bw())
+  if(save_plots) dev.off()
+  
+  inf_table <- table(df$suspected_infection_location)
+  #find cutoff value for pooling locations with smaller numbers of individuals
+  if(length(inf_table) <= max_groups){
+    inf_cutoff_count <- 0
+  } else{
+    inf_cutoff_count <- sort(inf_table[names(inf_table) != "unknown"], decreasing = TRUE)[max_groups]
+  }
+  other_inf_names <- c(names(which(inf_table <= inf_cutoff_count)), "unknown")
+  inf_loc_cutoff <- df$suspected_infection_location
+  inf_loc_cutoff[which(inf_loc_cutoff %in% other_inf_names)] <- "other"
+  
+  if(save_plots) pdf(file = paste0(run_set_title, "_inf_locs.pdf"), width = width, height = height)
+  plot(ggplot2::ggplot(data = data.frame(i = inf_loc_cutoff), ggplot2::aes(x = i)) + 
+         ggplot2::geom_bar(stat = "count") +
+         ggplot2::xlab("Suspected Infection Location") + 
+         ggplot2::ylab("Number of Individuals") + 
+         ggplot2::theme_bw())
+  if(save_plots) dev.off()
+}
