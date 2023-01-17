@@ -30,8 +30,9 @@ Imports:
     ggtext,
     reshape2,
     phyclust
+    coda
+    gridBase
 Suggests:
-    coda,
     phytools,
     testthat,
     knitr,
