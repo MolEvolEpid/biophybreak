@@ -38,10 +38,12 @@ rtrans_tree <- function(nInd = 10, time.span = (nInd-1)*0.5, gen.dist.type = "ga
   t_inf[1] <- time.span
   t_inf[nInd] <- 0
   
-  for(i in 2:(nInd-1)){
-    t_inf[i] <- runif(1, 0, time.span)
-    while(min(abs(t_inf[i] - t_inf[-i])) < sep){
+  if(nInd > 2){
+    for(i in 2:(nInd-1)){
       t_inf[i] <- runif(1, 0, time.span)
+      while(min(abs(t_inf[i] - t_inf[-i])) < sep){
+        t_inf[i] <- runif(1, 0, time.span)
+      }
     }
   }
   
