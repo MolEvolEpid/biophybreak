@@ -330,6 +330,10 @@ phybreak.plot.triple <- function(MCMCstate, phybreak.true = NULL,
   new_xlims[2] <- diff(new_xlims) + new_xlims[1]
   #plot true transmission history if it is known
   if(class(phybreak.true) == "phybreakdata"){
+    #shift sampling and infection times if they are on a different scale as inferred
+    shift <- MCMCstate$d$sample.times[1] - phybreak.true$sample.times[1]
+    phybreak.true$sample.times <- phybreak.true$sample.times + shift
+    phybreak.true$sim.infection.times <- phybreak.true$sim.infection.times + shift
     plotPhyloTrans(phybreak.true, tree.col = treecolors,
                    xlim.override = new_xlims, #may not work great if true infection times are older than predicted ones
                    xlab = "", mar = c(2,2.55,0,.2))

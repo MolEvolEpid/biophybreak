@@ -29,8 +29,8 @@ Imports:
     ggplot2,
     ggtext,
     reshape2,
-    phyclust
-    coda
+    phyclust,
+    coda,
     gridBase
 Suggests:
     phytools,
