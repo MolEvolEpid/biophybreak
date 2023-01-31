@@ -393,16 +393,21 @@ find_cdf <- function(x,y){
 
 #' @title Find transmission rates between individuals with certain labels
 #' @description Function to find the expected number of transmission between and within individuals 
-#' with some 
+#' that belong to certain groups 
 #' @param MCMCstate The output from sample_phybreak
 #' @param labels The labels for each individual
 #' @param infector.posterior.probabilities The matrix of posterior probabilities of the infectors, 
 #' as supplied by phybreak.infector.posts(MCMCstate)$post_support
+#' @param permute_test Whether or not to run a permutation test of how the individuals are labeled 
+#' to find a null distribution for the label transmission rates
+#' @param nPermute Number of permutations to use in the permutation test
+#' @param percentiles Percentiles at which to find quantiles from the null distribution
 #' @return A matrix containing the the probabilities for each individual to be infected by a sampled individual of a certain label
 #' and a matrix with the number of transmissions between and within individuals with each label
 #' @export
 #' 
-label.transmissions <- function(MCMCstate, labels, infector.posterior.probabilities = phybreak.infector.posts(MCMCstate)$post_support){
+label.transmissions <- function(MCMCstate, labels, infector.posterior.probabilities = phybreak.infector.posts(MCMCstate)$post_support,
+                                permute_test = FALSE, nPermute = 10000, percentiles = c(0.025, 0.975)){
   #make sure labels are a factor
   labels <- as.factor(labels)
   
@@ -410,7 +415,7 @@ label.transmissions <- function(MCMCstate, labels, infector.posterior.probabilit
   label.levels <- levels(labels)
   
   #number of unique labels
-  nLabels <- length(unique(labels))
+  nLabels <- length(label.levels)
   
   #matrix for number of transmissions between pairs of labels
   label.transmissions <- matrix(0, nrow = nLabels, ncol = nLabels)
@@ -420,13 +425,13 @@ label.transmissions <- function(MCMCstate, labels, infector.posterior.probabilit
   
   #labels of infectors for each individual
   infector.labels <- matrix(nrow = nInd, ncol = nLabels)
-  for(i in 1:nInd){
-    for(j in 1:nLabels){
+  for(i in seq_len(nInd)){
+    for(j in seq_len(nLabels)){
       infector.labels[i,j] <- infector.posterior.probabilities[2:(nInd+1),i] %*% (labels == label.levels[j])
     }
   }
   
-  for(i in 1:nInd){
+  for(i in seq_len(nInd)){
     label.transmissions[which(label.levels == labels[i]),] <- label.transmissions[which(label.levels == labels[i]),] + infector.labels[i,]
   }
   
@@ -436,5 +441,135 @@ label.transmissions <- function(MCMCstate, labels, infector.posterior.probabilit
   rownames(label.transmissions) <- label.levels
   colnames(label.transmissions) <- label.levels
   
-  return(list(infector.labels, label.transmissions))
+  if(permute_test){
+    #matrix for number of transmissions between pairs of labels
+    label.transmissions.null <- array(dim = c(nLabels, nLabels, nPermute))
+    #super slow but only takes a few seconds for 10k permutations
+    for(i in seq_len(nPermute)){
+      labels_permute <- sample(labels, replace = FALSE)
+      label.transmissions.null[,,i] <- label.transmissions(MCMCstate = MCMCstate, 
+                                                           labels = labels_permute,
+                                                           infector.posterior.probabilities = infector.posterior.probabilities)[[2]]
+    }
+    
+    #find quantiles for each entry of the matrix
+    quantiles <- array(dim = c(nLabels, nLabels, length(percentiles)))
+    for(i in seq_along(percentiles)){
+      quantiles[,,i] <- apply(label.transmissions.null, MARGIN = c(1,2), FUN = quantile, probs = percentiles[i])
+    }
+    return(list(infector.labels = infector.labels, label.transmissions = label.transmissions,
+                label.transmissions.null = label.transmissions.null, quantiles = quantiles))
+  } else{
+    return(list(infector.labels = infector.labels, label.transmissions = label.transmissions))
+  }
+}
+
+#' @title Find transmission rates between individuals with certain labels over multiple clusters
+#' @description Function to find the expected number of transmission between and within individuals 
+#' that belong to certain groups over multiple clusters
+#' @param output A list output as from run.biophybreak
+#' @param df A dataframe as from prepare.HIV.data
+#' @param labelname The name of the column in df to use as the label
+#' @param permute_test Whether or not to run a permutation test of how the individuals are labeled 
+#' to find a null distribution for the label transmission rates
+#' @param nPermute Number of permutations to use in the permutation test
+#' @param percentiles Percentiles at which to find quantiles from the null distribution (only affects individual cluster results)
+#' @return A list containing the individual cluster outputs from label.transmissions, 
+#' the overall matrix of transmission rates, an array of the null transmission rate samples from the permutation test, 
+#' the percentiles of each label transmission rate, and the raw p values for
+#' @export
+#' 
+label.transmissions.wrapper <- function(output, df, labelname, 
+                                        permute_test = TRUE, nPermute = 10000, percentiles = c(0.025, 0.975)){
+  if(!(labelname %in% names(df))) stop("That labelname is not in df")
+  #make it load stuff separately to allow larger datasets?
+  nClust <- length(output)
+  for(i in seq_len(nClust)){
+    if(class(output[[i]]$MCMCstate)[1] != "phybreak"){
+      stop("output[[i]]$MCMCstate must be a phybreak object for all i")
+    }
+  }
+  
+  #make sure labels are a factor
+  labels <- as.factor(df[labelname][[1]])
+  
+  #levels of label factors
+  label.levels <- levels(labels)
+  
+  #number of unique labels
+  nLabels <- length(label.levels)
+  
+  #function to extract label info and call label.transmissions
+  lt.miniwrap <- function(x, df, labelname, permute_test, nPermute, percentiles){
+    #find number of individuals in cluster
+    nInd <- length(unique(x$MCMCstate$d$hostnames))
+    #find dataframe indices of individuals in this cluster
+    df_indices <- sapply(x$MCMCstate$d$hostnames[1:nInd], 
+                         FUN = function(host, df){which(df$patient_ID == host)},
+                         df = df)
+    label.transmission <- label.transmissions(MCMCstate = x$MCMCstate, 
+                                              labels = as.factor(df[labelname][[1]])[df_indices], 
+                                              infector.posterior.probabilities = phybreak.infector.posts(x$MCMCstate)$post_support,
+                                              permute_test = permute_test,
+                                              nPermute = nPermute,
+                                              percentiles = percentiles)
+  }
+  
+  lt.wrapped <- parallel::mclapply(output, FUN = lt.miniwrap, 
+                                   df = df,
+                                   labelname = labelname,
+                                   permute_test = permute_test,
+                                   nPermute = nPermute,
+                                   percentiles = percentiles,
+                                   mc.preschedule = FALSE,
+                                   mc.cores = parallel::detectCores())
+  
+  #combine label transmission and permutation test results
+  all.label.transmissions <- matrix(0, nrow = dim(lt.wrapped[[1]]$label.transmissions)[1], ncol = dim(lt.wrapped[[1]]$label.transmissions)[1])
+  all.label.transmission.null <- array(0, dim = dim(lt.wrapped[[1]]$label.transmissions.null))
+  for(i in seq_along(lt.wrapped)){
+    all.label.transmissions <- all.label.transmissions + lt.wrapped[[i]]$label.transmissions
+    all.label.transmission.null <- all.label.transmission.null + lt.wrapped[[i]]$label.transmissions.null
+  }
+  
+  #find percentiles and p values
+  equal_permutes <- vector(mode = "list", length = nLabels^2)
+  dim(equal_permutes) <- c(nLabels, nLabels)
+  percentiles <- matrix(NA, nrow = nLabels, ncol = nLabels)
+  pval_uncor <- matrix(1, nrow = nLabels, ncol = nLabels)
+  for(i in seq_len(nLabels)){
+    for(j in seq_len(nLabels)){
+      null.sorted <- sort(all.label.transmission.null[i,j,])
+      equal_permutes[[i,j]] <- which(null.sorted == all.label.transmissions[i,j])
+      if(length(equal_permutes[[i,j]]) > 0){
+        #print(length(equal_permutes[[i,j]]))
+        percentiles[i,j] <- (min(equal_permutes[[i,j]]-1)+max(equal_permutes[[i,j]]-1))/(2*(nPermute-1))
+        #print(quant)
+        pval_uncor[i,j] <- min(percentiles[i,j], 1-percentiles[i,j])*2
+      } else{
+        if(all(null.sorted <= all.label.transmissions[i,j])){
+          percentiles[i,j] <- 1
+          pval_uncor[i,j] <- 2/(nPermute-1)
+        } else{
+          percentiles[i,j] <- min(which(sort(all.label.transmission.null[i,j,]) > all.label.transmissions[i,j])-1)/(nPermute-1)
+          pval_uncor[i,j] <- min(percentiles[i,j], 1-percentiles[i,j])*2
+          #don't let p value be 0
+          pval_uncor[i,j] <- max(pval_uncor[i,j], 2/(nPermute-1))
+        }
+      }
+    }
+  }
+  #add names to percentiles and p values
+  rownames(percentiles) <- rownames(all.label.transmissions)
+  colnames(percentiles) <- colnames(all.label.transmissions)
+  rownames(pval_uncor) <- rownames(all.label.transmissions)
+  colnames(pval_uncor) <- colnames(all.label.transmissions)
+  #add names to null samples
+  dimnames(all.label.transmission.null) <- list(to = rownames(all.label.transmissions), 
+                                                from = colnames(all.label.transmissions), 
+                                                sample = 1:nPermute)
+  return(list(lt.wrapped = lt.wrapped, 
+              all.label.transmissions = all.label.transmissions, 
+              all.label.transmission.null = all.label.transmission.null,
+              percentiles = percentiles, pval_uncor = pval_uncor))
 }
