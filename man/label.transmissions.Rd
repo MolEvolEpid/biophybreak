@@ -7,7 +7,10 @@
 label.transmissions(
   MCMCstate,
   labels,
-  infector.posterior.probabilities = phybreak.infector.posts(MCMCstate)$post_support
+  infector.posterior.probabilities = phybreak.infector.posts(MCMCstate)$post_support,
+  permute_test = FALSE,
+  nPermute = 10000,
+  percentiles = c(0.025, 0.975)
 )
 }
 \arguments{
@@ -17,6 +20,13 @@ label.transmissions(
 
 \item{infector.posterior.probabilities}{The matrix of posterior probabilities of the infectors, 
 as supplied by phybreak.infector.posts(MCMCstate)$post_support}
+
+\item{permute_test}{Whether or not to run a permutation test of how the individuals are labeled 
+to find a null distribution for the label transmission rates}
+
+\item{nPermute}{Number of permutations to use in the permutation test}
+
+\item{percentiles}{Percentiles at which to find quantiles from the null distribution}
 }
 \value{
 A matrix containing the the probabilities for each individual to be infected by a sampled individual of a certain label
@@ -24,5 +34,5 @@ and a matrix with the number of transmissions between and within individuals wit
 }
 \description{
 Function to find the expected number of transmission between and within individuals 
-with some
+that belong to certain groups
 }
