@@ -57,7 +57,7 @@ update_mS <- function() {
     logaccprob <- pbe1$logLikcoal - pbe0$logLikcoal
     
     ### accept or reject
-    if(!is.na(exp(logaccprob))){
+    if(!is.na(exp(logaccprob)) && !is.infinite(pbe1$logLikcoal)){
       if (runif(1) < exp(logaccprob)) {
         accept_pbe("mS")
       }
@@ -122,7 +122,7 @@ update_wh_slope <- function() {
       dgamma(pbe0$p$wh.slope, shape = h$wh.s.sh, scale = h$wh.s.av/h$wh.s.sh, log = TRUE)
     
     ### accept or reject
-    if(!is.na(exp(logaccprob))){
+    if(!is.na(exp(logaccprob)) && !is.infinite(pbe1$logLikcoal)){
       if (runif(1) < exp(logaccprob)) {
         accept_pbe("wh.slope")
       }
@@ -158,7 +158,7 @@ update_wh_exponent <- function() {
     dgamma(pbe0$p$wh.exponent, shape = h$wh.e.sh, scale = h$wh.e.av/h$wh.e.sh, log = TRUE)
   
   ### accept or reject
-  if(!is.na(exp(logaccprob))){
+  if(!is.na(exp(logaccprob)) && !is.infinite(pbe1$logLikcoal)){
     if (runif(1) < exp(logaccprob)) {
       accept_pbe("wh.exponent")
     }
@@ -193,7 +193,7 @@ update_wh_level <- function() {
     dgamma(pbe0$p$wh.level, shape = h$wh.0.sh, scale = h$wh.0.av/h$wh.0.sh, log = TRUE)
   
   ### accept or reject
-  if(!is.na(exp(logaccprob))){
+  if(!is.na(exp(logaccprob)) && !is.infinite(pbe1$logLikcoal)){
     if (runif(1) < exp(logaccprob)) {
       accept_pbe("wh.level")
     }
