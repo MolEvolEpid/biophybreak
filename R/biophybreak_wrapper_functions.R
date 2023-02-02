@@ -556,6 +556,7 @@ run.mbm <- function(df, n.adapt = 1000, n.burn = 1000, n.iter = 1000,
 #'@param est.gen.mean Whether to estimate the mean generation interval or keep it fixed.
 #'@param use.pml Whether to use phangorn::pml to calculate sequences likelihoods.
 #'@param run.names The names of the clusters to be used to saving files with run.biophybreak
+#'@param name.prepend An identifier to add to the beginning of the file names for the output
 #'@param overall.seed The seed used to generate the individual run seeds.
 #'@export
 prepare.biophybreak.data <- function(df, 
@@ -569,6 +570,7 @@ prepare.biophybreak.data <- function(df,
                                      use.pml = TRUE,
                                      mut.model = "pol",
                                      run.names = "automatic",
+                                     name.prepend = "",
                                      overall.seed = sample(2^31-1,1),
                                      ...){
   
@@ -666,9 +668,9 @@ prepare.biophybreak.data <- function(df,
   #make input lists
   for(i in seq_along(nInds2p)){
     if(run.names == "automatic"){
-      run_name[i] <- paste0(df$cluster_ID[clust_indiv_indices[[nInds2p[i]]][1]], "_", seeds[i])
+      run_name[i] <- paste0(name.prepend, "_", df$cluster_ID[clust_indiv_indices[[nInds2p[i]]][1]], "_", seeds[i])
     } else{
-      run_name[i] <- paste0(run.names[nInds2p[i]], "_", seeds[i])
+      run_name[i] <- paste0(name.prepend, "_", run.names[nInds2p[i]], "_", seeds[i])
     }
     #check if sequences are functionally identical
     SNPpatterns <- do.call(rbind, biophybreakdata[[nInds2p[i]]]$sequences)

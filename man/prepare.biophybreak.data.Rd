@@ -16,6 +16,7 @@ prepare.biophybreak.data(
   use.pml = TRUE,
   mut.model = "pol",
   run.names = "automatic",
+  name.prepend = "",
   overall.seed = sample(2^31 - 1, 1),
   ...
 )
@@ -55,6 +56,8 @@ Options are:
 \item{use.pml}{Whether to use phangorn::pml to calculate sequences likelihoods.}
 
 \item{run.names}{The names of the clusters to be used to saving files with run.biophybreak}
+
+\item{name.prepend}{An identifier to add to the beginning of the file names for the output}
 
 \item{overall.seed}{The seed used to generate the individual run seeds.}
 }
