@@ -149,11 +149,11 @@ mbm.predict <- function(BED = rep(NA, 1),
                         pol = rep(NA, 1), 
                         pol2 = rep(NA, 1),
                         prev.neg.time = NULL, 
-                        t.BED.delay = NULL,
-                        t.LAg.delay = NULL,
-                        t.CD4.delay = NULL,
+                        t.BED.delay = rep(0, length(BED)),
+                        t.LAg.delay = rep(0, length(LAg)),
+                        t.CD4.delay = rep(0, length(CD4)),
                         t.pol.delay = rep(0, length(pol)),
-                        t.pol2.delay = NULL,
+                        t.pol2.delay = rep(0, length(pol2)),
                         mub = NULL, 
                         Sigmab = NULL, 
                         sigmae = NULL,
@@ -182,16 +182,6 @@ mbm.predict <- function(BED = rep(NA, 1),
   addn.input <- list(...)
   if("t.sam.delay" %in% names(addn.input)) t.pol.delay <- addn.input$t.sam.delay
   
-  #delays between diagnosis and biomarker sampling default to those for pol
-  if(is.null(t.BED.delay)) t.BED.delay <- t.pol.delay
-  t.BED.delay[is.na(t.BED.delay)] <- t.pol.delay[is.na(t.BED.delay)]
-  if(is.null(t.LAg.delay)) t.LAg.delay <- t.pol.delay
-  t.LAg.delay[is.na(t.LAg.delay)] <- t.pol.delay[is.na(t.LAg.delay)]
-  if(is.null(t.CD4.delay)) t.CD4.delay <- t.pol.delay
-  t.CD4.delay[is.na(t.CD4.delay)] <- t.pol.delay[is.na(t.CD4.delay)]
-  if(is.null(t.pol2.delay)) t.pol2.delay <- t.pol.delay
-  t.pol2.delay[is.na(t.pol2.delay)] <- t.pol.delay[is.na(t.pol2.delay)]
-  
   #put into matrix format for JAGS model if it is not already
   if(!is.matrix(CD4)){
     cd4.test <- sqrt(matrix(CD4, ncol = 1))
@@ -204,22 +194,22 @@ mbm.predict <- function(BED = rep(NA, 1),
     pol.test <- pol
   }
   if(!is.matrix(BED)){
-    bed.test <- matrix(BED, ncol = dim(cd4.test)[2])
+    bed.test <- matrix(BED, ncol = 1)
   } else{
     bed.test <- BED
   }
   if(!is.matrix(LAg)){
-    lag.test <- matrix(LAg, ncol = dim(cd4.test)[2])
+    lag.test <- matrix(LAg, ncol = 1)
   } else{
     lag.test <- LAg
   }
   if(!is.matrix(pol2)){
-    pol2.test <- matrix(pol2, ncol = dim(cd4.test)[2])
+    pol2.test <- matrix(pol2, ncol = 1)
   } else{
     pol2.test <- pol2
   }
   if(!is.matrix(t.pol.delay)){
-    t.pol.delay.test <- matrix(t.pol.delay, ncol = dim(cd4.test)[2])
+    t.pol.delay.test <- matrix(t.pol.delay, ncol = dim(pol.test)[2])
   } else{
     t.pol.delay.test <- t.pol.delay
   }
@@ -229,17 +219,17 @@ mbm.predict <- function(BED = rep(NA, 1),
     t.cd4.delay.test <- t.CD4.delay
   }
   if(!is.matrix(t.BED.delay)){
-    t.bed.delay.test <- matrix(t.BED.delay, ncol = dim(cd4.test)[2])
+    t.bed.delay.test <- matrix(t.BED.delay, ncol = dim(bed.test)[2])
   } else{
     t.bed.delay.test <- t.BED.delay
   }
   if(!is.matrix(t.LAg.delay)){
-    t.lag.delay.test <- matrix(t.LAg.delay, ncol = dim(cd4.test)[2])
+    t.lag.delay.test <- matrix(t.LAg.delay, ncol = dim(lag.test)[2])
   } else{
     t.lag.delay.test <- t.LAg.delay
   }
   if(!is.matrix(t.pol2.delay)){
-    t.pol2.delay.test <- matrix(t.pol2.delay, ncol = dim(cd4.test)[2])
+    t.pol2.delay.test <- matrix(t.pol2.delay, ncol = dim(pol2.test)[2])
   } else{
     t.pol2.delay.test <- t.pol2.delay
   }

@@ -26,6 +26,8 @@ Imports:
     stringr,
     utils,
     sp,
+    rjags,
+    mvtnorm,
     ggplot2,
     ggtext,
     reshape2,
