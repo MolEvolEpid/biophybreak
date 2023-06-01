@@ -453,8 +453,8 @@ run.mbm <- function(df, n.adapt = 1000, n.burn = 1000, n.iter = 1000,
   mpol <- sapply(df$pol_qc, FUN = length)
   mpol2 <- sapply(df$pol2_qc, FUN = length)
   
-  #find maximum m for each individual
-  m <- mapply(FUN = max, mBED, mLAg, mCD4, mpol, mpol2)
+  #find maximum m for each individual (no longer needed)
+  #m <- mapply(FUN = max, mBED, mLAg, mCD4, mpol, mpol2)
   
   #calculate delays between infection and sampling
   BED_delays <- mapply(FUN = `-`, df$BED_dates, df$first_pos_test_date_adj, SIMPLIFY = FALSE)
@@ -462,6 +462,25 @@ run.mbm <- function(df, n.adapt = 1000, n.burn = 1000, n.iter = 1000,
   CD4_delays <- mapply(FUN = `-`, df$CD4_dates, df$first_pos_test_date_adj, SIMPLIFY = FALSE)
   pol_delays <- mapply(FUN = `-`, df$seq_dates, df$first_pos_test_date_adj, SIMPLIFY = FALSE)
   pol2_delays <- mapply(FUN = `-`, df$pol2_dates, df$first_pos_test_date_adj, SIMPLIFY = FALSE)
+  
+  #set delays to 0 if the corresponding biomarker value is NA
+  #function to test if biomarker values are NA and set delays if necessary
+  find_biomarker_NAs <- function(values, delays){
+    #check to make sure they are the same length
+    if(length(values) != length(delays)) stop("The number of biomarker samples and sample dates must match")
+    #find indices where both biomarker values and biomarker dates are NA
+    both_NA <- (is.na(values) & is.na(delays))
+    #change delays where both are NA to 0
+    delays[both_NA] <- 0
+    return(delays)
+  }
+  
+  #apply function
+  BED_delays <- mapply(FUN = find_biomarker_NAs, df$BED_qc, BED_delays, SIMPLIFY = FALSE)
+  LAg_delays <- mapply(FUN = find_biomarker_NAs, df$LAg_qc, LAg_delays, SIMPLIFY = FALSE)
+  CD4_delays <- mapply(FUN = find_biomarker_NAs, df$CD4_qc, CD4_delays, SIMPLIFY = FALSE)
+  pol_delays <- mapply(FUN = find_biomarker_NAs, df$pol_qc, pol_delays, SIMPLIFY = FALSE)
+  pol2_delays <- mapply(FUN = find_biomarker_NAs, df$pol2_qc, pol2_delays, SIMPLIFY = FALSE)
   
   #calculate time between last negative and first positive test
   last_neg_first_pos_diff <- mapply(FUN = `-`, df$first_pos_test_date_adj, df$last_neg_test_date, SIMPLIFY = FALSE)
@@ -475,20 +494,20 @@ run.mbm <- function(df, n.adapt = 1000, n.burn = 1000, n.iter = 1000,
   }
   
   #put all biomarkers into matrices that have the same shape (on a per individual basis)
-  t_BED_mats <- mapply(FUN = biomarker_mat, values = BED_delays, m = m, SIMPLIFY = FALSE)
-  BED_mats <- mapply(FUN = biomarker_mat, values = df$BED_qc, m = m, SIMPLIFY = FALSE)
+  t_BED_mats <- mapply(FUN = biomarker_mat, values = BED_delays, m = mBED, SIMPLIFY = FALSE)
+  BED_mats <- mapply(FUN = biomarker_mat, values = df$BED_qc, m = mBED, SIMPLIFY = FALSE)
   
-  t_LAg_mats <- mapply(FUN = biomarker_mat, values = LAg_delays, m = m, SIMPLIFY = FALSE)
-  LAg_mats <- mapply(FUN = biomarker_mat, values = df$LAg_qc, m = m, SIMPLIFY = FALSE)
+  t_LAg_mats <- mapply(FUN = biomarker_mat, values = LAg_delays, m = mLAg, SIMPLIFY = FALSE)
+  LAg_mats <- mapply(FUN = biomarker_mat, values = df$LAg_qc, m = mLAg, SIMPLIFY = FALSE)
   
-  t_CD4_mats <- mapply(FUN = biomarker_mat, values = CD4_delays, m = m, SIMPLIFY = FALSE)
-  CD4_mats <- mapply(FUN = biomarker_mat, values = df$CD4_qc, m = m, SIMPLIFY = FALSE)
+  t_CD4_mats <- mapply(FUN = biomarker_mat, values = CD4_delays, m = mCD4, SIMPLIFY = FALSE)
+  CD4_mats <- mapply(FUN = biomarker_mat, values = df$CD4_qc, m = mCD4, SIMPLIFY = FALSE)
   
-  t_pol_mats <- mapply(FUN = biomarker_mat, values = pol_delays, m = m, SIMPLIFY = FALSE)
-  pol_mats <- mapply(FUN = biomarker_mat, values = df$pol_qc, m = m, SIMPLIFY = FALSE)
+  t_pol_mats <- mapply(FUN = biomarker_mat, values = pol_delays, m = mpol, SIMPLIFY = FALSE)
+  pol_mats <- mapply(FUN = biomarker_mat, values = df$pol_qc, m = mpol, SIMPLIFY = FALSE)
   
-  t_pol2_mats <- mapply(FUN = biomarker_mat, values = pol2_delays, m = m, SIMPLIFY = FALSE)
-  pol2_mats <- mapply(FUN = biomarker_mat, values = df$pol2_qc, m = m, SIMPLIFY = FALSE)
+  t_pol2_mats <- mapply(FUN = biomarker_mat, values = pol2_delays, m = mpol2, SIMPLIFY = FALSE)
+  pol2_mats <- mapply(FUN = biomarker_mat, values = df$pol2_qc, m = mpol2, SIMPLIFY = FALSE)
   
   #load trained MBM parameters
   data("MBM_pars")
