@@ -16,7 +16,7 @@ Description: Implementation the outbreak analysis method described by
 License: GPL (>=2)
 LazyData: TRUE
 Depends:
-    R(>= 3.1.0),
+    R(>= 3.5.0),
     phangorn,
     ape
 Imports:
@@ -40,5 +40,5 @@ Suggests:
     knitr,
     rmarkdown
 LinkingTo: Rcpp
-RoxygenNote: 7.1.1
+RoxygenNote: 7.2.3
 VignetteBuilder: knitr

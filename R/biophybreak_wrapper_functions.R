@@ -17,6 +17,8 @@
 #'@param seq_names The names of the sequences
 #'@param pol_override A list of vectors for values for the polymorphism count if they have already been calculated externally. 
 #'These values will replace the pol values calculated by this function.
+#'@param seq_length_override A list of vectors for the sequence lengths 
+#'(to be used along with pol_override if they have already been calculated externally)
 #'@param pol2_dates A list of vectors for the sample dates of the pol2 values
 #'@param pol A list of vectors for values for the pol2 value
 #'@param VL_dates A list of vectors for the sample dates of the viral load
@@ -60,8 +62,9 @@ prepare.HIV.data <- function(patient_ID,
                              CD4 = NULL,
                              seq_dates,
                              seqs,
-                             seq_names,
+                             seq_names = NULL,
                              pol_override = NULL,
+                             seq_length_override = NULL,
                              pol2_dates = NULL,
                              pol2 = NULL, 
                              VL_dates = NULL,
@@ -170,11 +173,20 @@ prepare.HIV.data <- function(patient_ID,
   } else{
     stop("seq_dates must be provided")
   }
-  if(!is.null(seq)){
-    seq <- as.list(seq)
+  if(!is.null(seqs)){
+    seq <- as.list(seqs)
   } else{
-    seq <- as.list(rep("N", total_inds))
+    seqs <- as.list(rep("n", total_inds))
     warning("No sequences found. Using blank sequences.")
+  }
+  
+  if(!is.null(seq_names)){
+    seq_names <- as.list(seq_names)
+  } else{
+    n_seqs <- lapply(seqs, FUN = length)
+    #print(n_seqs)
+    seq_names <- mapply(FUN = function(a,b) if(length(b) > 0) paste(a,b,sep = "_") else character(0), 
+                        a = patient_ID, b = lapply(n_seqs, FUN = seq_len))
   }
   
   #pol2 sample dates and values
@@ -247,7 +259,7 @@ prepare.HIV.data <- function(patient_ID,
     risk_group <- as.character(rep(NA, total_inds))
   }
   
-  #use the earliest sampled biomarker as the first positive date if it is blank or after biomarker measurements
+  #use the earliest sampled biomarker as the first positive date if it is blank or after biomarker measurements (add VL dates?)
   first_pos_test_date_adj <- mapply(FUN = min, 
                                     first_pos_test_date, 
                                     ART_start_date,
@@ -259,34 +271,35 @@ prepare.HIV.data <- function(patient_ID,
                                     aids_diagnosis_date, 
                                     na.rm = TRUE)
   
-  #calculate polymorphism count from sequences
-  #collapse inner lists in seqs
-  seqs <- lapply(seqs, FUN = function(x) if(is.list(x) & class(x) != "phyDat") do.call("rbind", x) else x)
-  #function to calculate polymorphism counts
-  calculate_pol <- function(sequences){
-    if(is.null(dim(sequences))){
-      nseq <- 1
-    } else{
-      nseq <- dim(sequences)[1]
+  #calculate polymorphism count from sequences if not provided
+  if(is.null(pol_override)){
+    #collapse inner lists in seqs 
+    #TODO check more about what format seqs is in
+    seqs <- lapply(seqs, FUN = function(x) if(is.list(x) & class(x) != "phyDat") do.call("rbind", x) else x)
+    #function to calculate polymorphism counts
+    calculate_pol <- function(sequences){
+      if(is.null(dim(sequences))){
+        nseq <- 1
+      } else{
+        nseq <- dim(sequences)[1]
+      }
+      length_seq <- integer(length = nseq)
+      pol <- double(length = nseq)
+      for(i in seq_len(nseq)){
+        frequencies <- table(as.character(sequences[i,]))
+        polymorphic_count <- sum(frequencies[names(frequencies) != "-" & names(frequencies) != "n" & names(frequencies) != "a" & 
+                                               names(frequencies) != "c" & names(frequencies) != "g" & names(frequencies) != "t"])
+        length_seq[i] <- sum(frequencies[names(frequencies) != "-" & names(frequencies) != "n"]) #length of sequence
+        pol[i] <- polymorphic_count/length_seq[i]
+      }
+      return(list(length = length_seq, pol = pol))
     }
-    length_seq <- integer(length = nseq)
-    pol <- double(length = nseq)
-    for(i in seq_len(nseq)){
-      frequencies <- table(as.character(sequences[i,]))
-      polymorphic_count <- sum(frequencies[names(frequencies) != "-" & names(frequencies) != "n" & names(frequencies) != "a" & 
-                                             names(frequencies) != "c" & names(frequencies) != "g" & names(frequencies) != "t"])
-      length_seq[i] <- sum(frequencies[names(frequencies) != "-" & names(frequencies) != "n"]) #length of sequence
-      pol[i] <- polymorphic_count/length_seq[i]
-    }
-    return(list(length = length_seq, pol = pol))
-  }
-  length_and_pol <- lapply(seqs, FUN = calculate_pol)
-  seq_length <- lapply(length_and_pol, FUN = function(x) x$length)
-  pol <- lapply(length_and_pol, FUN = function(x) x$pol)
-  
-  #override pol values if provided
-  if(!is.null(pol_override)){
+    length_and_pol <- lapply(seqs, FUN = calculate_pol)
+    seq_length <- lapply(length_and_pol, FUN = function(x) x$length)
+    pol <- lapply(length_and_pol, FUN = function(x) x$pol)
+  } else{ #override pol values if provided
     pol <- as.list(pol_override)
+    seq_length = as.list(seq_length_override)
   }
   
   #find number of sequences per individual
@@ -392,7 +405,7 @@ prepare.HIV.data <- function(patient_ID,
     #find pdf and cdf in terms of real time
     cdfs <- lapply(infection_age_dists$infection_age_dists_diag, FUN = function(dist){find_cdf(-rev(dist$x), rev(dist$y))})
     real_times <- mapply(FUN = function(diag, dist){rev(diag - dist$x)}, 
-                       diag = df$first_pos_test_date_adj, dist = infection_age_dists$infection_age_dists_diag, SIMPLIFY = FALSE)
+                         diag = df$first_pos_test_date_adj, dist = infection_age_dists$infection_age_dists_diag, SIMPLIFY = FALSE)
     #put times and (forward time) cdfs together
     cdf <- vector(mode = "list", length = length(cdfs))
     for(i in seq_along(cdfs)){

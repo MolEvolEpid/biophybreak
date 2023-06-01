@@ -5,17 +5,17 @@
 \title{Predict infection times with MBM}
 \usage{
 mbm.predict(
-  BED = rep(NA, length(pol)),
-  LAg = rep(NA, length(pol)),
-  CD4 = rep(NA, length(pol)),
-  pol,
-  pol2 = rep(NA, length(pol)),
+  BED = rep(NA, 1),
+  LAg = rep(NA, 1),
+  CD4 = rep(NA, 1),
+  pol = rep(NA, 1),
+  pol2 = rep(NA, 1),
   prev.neg.time = NULL,
-  t.BED.delay = NULL,
-  t.LAg.delay = NULL,
-  t.CD4.delay = NULL,
+  t.BED.delay = rep(0, length(BED)),
+  t.LAg.delay = rep(0, length(LAg)),
+  t.CD4.delay = rep(0, length(CD4)),
   t.pol.delay = rep(0, length(pol)),
-  t.pol2.delay = NULL,
+  t.pol2.delay = rep(0, length(pol2)),
   mub = NULL,
   Sigmab = NULL,
   sigmae = NULL,
@@ -41,7 +41,7 @@ mbm.predict(
 Can be omitted.}
 
 \item{pol}{A vector for the proportion of polymorphic sites in the HIV polymerase gene, one for each individual.
-This value must be provided.}
+Can be omitted.}
 
 \item{pol2}{A vector of values for the diversity in the HIV polymerase gene as obtained from NGS, one for each individual. Can be omitted.}
 
