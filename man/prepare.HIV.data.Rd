@@ -17,8 +17,9 @@ prepare.HIV.data(
   CD4 = NULL,
   seq_dates,
   seqs,
-  seq_names,
+  seq_names = NULL,
   pol_override = NULL,
+  seq_length_override = NULL,
   pol2_dates = NULL,
   pol2 = NULL,
   VL_dates = NULL,
@@ -71,6 +72,9 @@ or if the first positive test date is unavailable.}
 
 \item{pol_override}{A list of vectors for values for the polymorphism count if they have already been calculated externally. 
 These values will replace the pol values calculated by this function.}
+
+\item{seq_length_override}{A list of vectors for the sequence lengths 
+(to be used along with pol_override if they have already been calculated externally)}
 
 \item{pol2_dates}{A list of vectors for the sample dates of the pol2 values}
 

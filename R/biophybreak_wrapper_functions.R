@@ -17,6 +17,8 @@
 #'@param seq_names The names of the sequences
 #'@param pol_override A list of vectors for values for the polymorphism count if they have already been calculated externally. 
 #'These values will replace the pol values calculated by this function.
+#'@param seq_length_override A list of vectors for the sequence lengths 
+#'(to be used along with pol_override if they have already been calculated externally)
 #'@param pol2_dates A list of vectors for the sample dates of the pol2 values
 #'@param pol A list of vectors for values for the pol2 value
 #'@param VL_dates A list of vectors for the sample dates of the viral load
@@ -60,8 +62,9 @@ prepare.HIV.data <- function(patient_ID,
                              CD4 = NULL,
                              seq_dates,
                              seqs,
-                             seq_names,
+                             seq_names = NULL,
                              pol_override = NULL,
+                             seq_length_override = NULL,
                              pol2_dates = NULL,
                              pol2 = NULL, 
                              VL_dates = NULL,
@@ -170,11 +173,20 @@ prepare.HIV.data <- function(patient_ID,
   } else{
     stop("seq_dates must be provided")
   }
-  if(!is.null(seq)){
-    seq <- as.list(seq)
+  if(!is.null(seqs)){
+    seq <- as.list(seqs)
   } else{
-    seq <- as.list(rep("N", total_inds))
+    seqs <- as.list(rep("n", total_inds))
     warning("No sequences found. Using blank sequences.")
+  }
+  
+  if(!is.null(seq_names)){
+    seq_names <- as.list(seq_names)
+  } else{
+    n_seqs <- lapply(seqs, FUN = length)
+    #print(n_seqs)
+    seq_names <- mapply(FUN = function(a,b) if(length(b) > 0) paste(a,b,sep = "_") else character(0), 
+                        a = patient_ID, b = lapply(n_seqs, FUN = seq_len))
   }
   
   #pol2 sample dates and values
@@ -247,7 +259,7 @@ prepare.HIV.data <- function(patient_ID,
     risk_group <- as.character(rep(NA, total_inds))
   }
   
-  #use the earliest sampled biomarker as the first positive date if it is blank or after biomarker measurements
+  #use the earliest sampled biomarker as the first positive date if it is blank or after biomarker measurements (add VL dates?)
   first_pos_test_date_adj <- mapply(FUN = min, 
                                     first_pos_test_date, 
                                     ART_start_date,
@@ -259,34 +271,35 @@ prepare.HIV.data <- function(patient_ID,
                                     aids_diagnosis_date, 
                                     na.rm = TRUE)
   
-  #calculate polymorphism count from sequences
-  #collapse inner lists in seqs
-  seqs <- lapply(seqs, FUN = function(x) if(is.list(x) & class(x) != "phyDat") do.call("rbind", x) else x)
-  #function to calculate polymorphism counts
-  calculate_pol <- function(sequences){
-    if(is.null(dim(sequences))){
-      nseq <- 1
-    } else{
-      nseq <- dim(sequences)[1]
+  #calculate polymorphism count from sequences if not provided
+  if(is.null(pol_override)){
+    #collapse inner lists in seqs 
+    #TODO check more about what format seqs is in
+    seqs <- lapply(seqs, FUN = function(x) if(is.list(x) & class(x) != "phyDat") do.call("rbind", x) else x)
+    #function to calculate polymorphism counts
+    calculate_pol <- function(sequences){
+      if(is.null(dim(sequences))){
+        nseq <- 1
+      } else{
+        nseq <- dim(sequences)[1]
+      }
+      length_seq <- integer(length = nseq)
+      pol <- double(length = nseq)
+      for(i in seq_len(nseq)){
+        frequencies <- table(as.character(sequences[i,]))
+        polymorphic_count <- sum(frequencies[names(frequencies) != "-" & names(frequencies) != "n" & names(frequencies) != "a" & 
+                                               names(frequencies) != "c" & names(frequencies) != "g" & names(frequencies) != "t"])
+        length_seq[i] <- sum(frequencies[names(frequencies) != "-" & names(frequencies) != "n"]) #length of sequence
+        pol[i] <- polymorphic_count/length_seq[i]
+      }
+      return(list(length = length_seq, pol = pol))
     }
-    length_seq <- integer(length = nseq)
-    pol <- double(length = nseq)
-    for(i in seq_len(nseq)){
-      frequencies <- table(as.character(sequences[i,]))
-      polymorphic_count <- sum(frequencies[names(frequencies) != "-" & names(frequencies) != "n" & names(frequencies) != "a" & 
-                                             names(frequencies) != "c" & names(frequencies) != "g" & names(frequencies) != "t"])
-      length_seq[i] <- sum(frequencies[names(frequencies) != "-" & names(frequencies) != "n"]) #length of sequence
-      pol[i] <- polymorphic_count/length_seq[i]
-    }
-    return(list(length = length_seq, pol = pol))
-  }
-  length_and_pol <- lapply(seqs, FUN = calculate_pol)
-  seq_length <- lapply(length_and_pol, FUN = function(x) x$length)
-  pol <- lapply(length_and_pol, FUN = function(x) x$pol)
-  
-  #override pol values if provided
-  if(!is.null(pol_override)){
+    length_and_pol <- lapply(seqs, FUN = calculate_pol)
+    seq_length <- lapply(length_and_pol, FUN = function(x) x$length)
+    pol <- lapply(length_and_pol, FUN = function(x) x$pol)
+  } else{ #override pol values if provided
     pol <- as.list(pol_override)
+    seq_length = as.list(seq_length_override)
   }
   
   #find number of sequences per individual
@@ -392,7 +405,7 @@ prepare.HIV.data <- function(patient_ID,
     #find pdf and cdf in terms of real time
     cdfs <- lapply(infection_age_dists$infection_age_dists_diag, FUN = function(dist){find_cdf(-rev(dist$x), rev(dist$y))})
     real_times <- mapply(FUN = function(diag, dist){rev(diag - dist$x)}, 
-                       diag = df$first_pos_test_date_adj, dist = infection_age_dists$infection_age_dists_diag, SIMPLIFY = FALSE)
+                         diag = df$first_pos_test_date_adj, dist = infection_age_dists$infection_age_dists_diag, SIMPLIFY = FALSE)
     #put times and (forward time) cdfs together
     cdf <- vector(mode = "list", length = length(cdfs))
     for(i in seq_along(cdfs)){
@@ -453,8 +466,8 @@ run.mbm <- function(df, n.adapt = 1000, n.burn = 1000, n.iter = 1000,
   mpol <- sapply(df$pol_qc, FUN = length)
   mpol2 <- sapply(df$pol2_qc, FUN = length)
   
-  #find maximum m for each individual
-  m <- mapply(FUN = max, mBED, mLAg, mCD4, mpol, mpol2)
+  #find maximum m for each individual (no longer needed)
+  #m <- mapply(FUN = max, mBED, mLAg, mCD4, mpol, mpol2)
   
   #calculate delays between infection and sampling
   BED_delays <- mapply(FUN = `-`, df$BED_dates, df$first_pos_test_date_adj, SIMPLIFY = FALSE)
@@ -462,6 +475,25 @@ run.mbm <- function(df, n.adapt = 1000, n.burn = 1000, n.iter = 1000,
   CD4_delays <- mapply(FUN = `-`, df$CD4_dates, df$first_pos_test_date_adj, SIMPLIFY = FALSE)
   pol_delays <- mapply(FUN = `-`, df$seq_dates, df$first_pos_test_date_adj, SIMPLIFY = FALSE)
   pol2_delays <- mapply(FUN = `-`, df$pol2_dates, df$first_pos_test_date_adj, SIMPLIFY = FALSE)
+  
+  #set delays to 0 if the corresponding biomarker value is NA
+  #function to test if biomarker values are NA and set delays if necessary
+  find_biomarker_NAs <- function(values, delays){
+    #check to make sure they are the same length
+    if(length(values) != length(delays)) stop("The number of biomarker samples and sample dates must match")
+    #find indices where both biomarker values and biomarker dates are NA
+    both_NA <- (is.na(values) & is.na(delays))
+    #change delays where both are NA to 0
+    delays[both_NA] <- 0
+    return(delays)
+  }
+  
+  #apply function
+  BED_delays <- mapply(FUN = find_biomarker_NAs, df$BED_qc, BED_delays, SIMPLIFY = FALSE)
+  LAg_delays <- mapply(FUN = find_biomarker_NAs, df$LAg_qc, LAg_delays, SIMPLIFY = FALSE)
+  CD4_delays <- mapply(FUN = find_biomarker_NAs, df$CD4_qc, CD4_delays, SIMPLIFY = FALSE)
+  pol_delays <- mapply(FUN = find_biomarker_NAs, df$pol_qc, pol_delays, SIMPLIFY = FALSE)
+  pol2_delays <- mapply(FUN = find_biomarker_NAs, df$pol2_qc, pol2_delays, SIMPLIFY = FALSE)
   
   #calculate time between last negative and first positive test
   last_neg_first_pos_diff <- mapply(FUN = `-`, df$first_pos_test_date_adj, df$last_neg_test_date, SIMPLIFY = FALSE)
@@ -475,20 +507,20 @@ run.mbm <- function(df, n.adapt = 1000, n.burn = 1000, n.iter = 1000,
   }
   
   #put all biomarkers into matrices that have the same shape (on a per individual basis)
-  t_BED_mats <- mapply(FUN = biomarker_mat, values = BED_delays, m = m, SIMPLIFY = FALSE)
-  BED_mats <- mapply(FUN = biomarker_mat, values = df$BED_qc, m = m, SIMPLIFY = FALSE)
+  t_BED_mats <- mapply(FUN = biomarker_mat, values = BED_delays, m = mBED, SIMPLIFY = FALSE)
+  BED_mats <- mapply(FUN = biomarker_mat, values = df$BED_qc, m = mBED, SIMPLIFY = FALSE)
   
-  t_LAg_mats <- mapply(FUN = biomarker_mat, values = LAg_delays, m = m, SIMPLIFY = FALSE)
-  LAg_mats <- mapply(FUN = biomarker_mat, values = df$LAg_qc, m = m, SIMPLIFY = FALSE)
+  t_LAg_mats <- mapply(FUN = biomarker_mat, values = LAg_delays, m = mLAg, SIMPLIFY = FALSE)
+  LAg_mats <- mapply(FUN = biomarker_mat, values = df$LAg_qc, m = mLAg, SIMPLIFY = FALSE)
   
-  t_CD4_mats <- mapply(FUN = biomarker_mat, values = CD4_delays, m = m, SIMPLIFY = FALSE)
-  CD4_mats <- mapply(FUN = biomarker_mat, values = df$CD4_qc, m = m, SIMPLIFY = FALSE)
+  t_CD4_mats <- mapply(FUN = biomarker_mat, values = CD4_delays, m = mCD4, SIMPLIFY = FALSE)
+  CD4_mats <- mapply(FUN = biomarker_mat, values = df$CD4_qc, m = mCD4, SIMPLIFY = FALSE)
   
-  t_pol_mats <- mapply(FUN = biomarker_mat, values = pol_delays, m = m, SIMPLIFY = FALSE)
-  pol_mats <- mapply(FUN = biomarker_mat, values = df$pol_qc, m = m, SIMPLIFY = FALSE)
+  t_pol_mats <- mapply(FUN = biomarker_mat, values = pol_delays, m = mpol, SIMPLIFY = FALSE)
+  pol_mats <- mapply(FUN = biomarker_mat, values = df$pol_qc, m = mpol, SIMPLIFY = FALSE)
   
-  t_pol2_mats <- mapply(FUN = biomarker_mat, values = pol2_delays, m = m, SIMPLIFY = FALSE)
-  pol2_mats <- mapply(FUN = biomarker_mat, values = df$pol2_qc, m = m, SIMPLIFY = FALSE)
+  t_pol2_mats <- mapply(FUN = biomarker_mat, values = pol2_delays, m = mpol2, SIMPLIFY = FALSE)
+  pol2_mats <- mapply(FUN = biomarker_mat, values = df$pol2_qc, m = mpol2, SIMPLIFY = FALSE)
   
   #load trained MBM parameters
   data("MBM_pars")
