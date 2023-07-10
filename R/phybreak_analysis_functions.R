@@ -580,6 +580,7 @@ label.transmissions.wrapper <- function(output, df, labelname,
 #'@param group_name The name of the column in df to consider
 #'@param max_groups The maximum number of groups, including the "other" group
 #'@return A vector of the group that each individual belongs to with (potentially) the smallest groups pooled into "other"
+#'@export
 group.cutoff <- function(df, group_name, max_groups){
   if(!(group_name %in% names(df))) stop("That group_name is not in df")
   group_table <- table(df[,group_name])
