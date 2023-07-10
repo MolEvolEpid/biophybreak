@@ -573,3 +573,26 @@ label.transmissions.wrapper <- function(output, df, labelname,
               all.label.transmission.null = all.label.transmission.null,
               percentiles = percentiles, pval_uncor = pval_uncor))
 }
+
+#'@title Pool smaller groups of individuals together
+#'@description Function to add cutoffs to grouping (pool smaller groups of individuals together in an "other" group)
+#'@param df A data frame containing infection time distributions as in the output from prepare.HIV.data 
+#'@param group_name The name of the column in df to consider
+#'@param max_groups The maximum number of groups, including the "other" group
+#'@return A vector of the group that each individual belongs to with (potentially) the smallest groups pooled into "other"
+group.cutoff <- function(df, group_name, max_groups){
+  if(!(group_name %in% names(df))) stop("That group_name is not in df")
+  group_table <- table(df[,group_name])
+  
+  #find cutoff value for pooling groups with smaller numbers of individuals
+  if(length(group_table) <= max_groups){
+    group_cutoff_count <- 0
+  } else{
+    group_cutoff_count <- sort(group_table[names(group_table) != "unknown"], decreasing = TRUE)[max_groups]
+  }
+  
+  other_group_names <- c(names(which(group_table <= group_cutoff_count)), "unknown")
+  group_cutoff <- df[,group_name]
+  group_cutoff[which(group_cutoff %in% other_group_names)] <- "other"
+  return(group_cutoff)
+}
