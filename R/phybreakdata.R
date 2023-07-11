@@ -212,7 +212,10 @@ phybreakdata <- function(sequences, sample.times, spatial = NULL, sample.names =
     if(all(rownames(spatial) == colnames(spatial))) {
       res <- c(res, list(distances = spatial[orderedhosts, orderedhosts]))
     } else if(all(colnames(spatial) %in% c("lon", "lat"))) {
-      distances <- sp::spDists(as.matrix(spatial[, c("lon", "lat")]), longlat = TRUE)
+      #distances <- sp::spDists(as.matrix(spatial[, c("lon", "lat")]), longlat = TRUE)
+      #convert spatial to sf class object
+      spatial_sf <- sf::st_as_sf(as.data.frame(as.matrix(spatial[, c("lon", "lat")])))
+      distances <- sf::st_distance(spatial_sf, which = "Great Circle")
       colnames(distances) <- rownames(distances) <- rownames(spatial)
       res <- c(res, list(locations = spatial[orderedhosts, c("lon", "lat")],
                          distances = distances[orderedhosts, orderedhosts]))
