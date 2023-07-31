@@ -5,16 +5,24 @@
 \title{Find transmission rates between individuals with certain labels over multiple clusters}
 \usage{
 label.transmissions.wrapper(
-  output,
+  output = NULL,
+  filenames = NULL,
+  filepath = NULL,
   df,
   labelname,
   permute_test = TRUE,
   nPermute = 10000,
-  percentiles = c(0.025, 0.975)
+  percentiles = c(0.025, 0.975),
+  max.cores = parallel::detectCores()
 )
 }
 \arguments{
-\item{output}{A list output as from run.biophybreak}
+\item{output}{A list output as from run.biophybreak. Does not need to be specified if filenames and filepath are provided.
+For large datasets, use of filenames and filepath is recommended instead}
+
+\item{filenames}{A vector of file names of output from biophybreak}
+
+\item{filepath}{The path to the biophybreak MCMC output (should include trailing "/")}
 
 \item{df}{A dataframe as from prepare.HIV.data}
 
@@ -26,6 +34,8 @@ to find a null distribution for the label transmission rates}
 \item{nPermute}{Number of permutations to use in the permutation test}
 
 \item{percentiles}{Percentiles at which to find quantiles from the null distribution (only affects individual cluster results)}
+
+\item{max.cores}{The maximum number of cores to use for parallel processing}
 }
 \value{
 A list containing the individual cluster outputs from label.transmissions, 
@@ -35,4 +45,7 @@ the percentiles of each label transmission rate, and the raw p values for
 \description{
 Function to find the expected number of transmission between and within individuals 
 that belong to certain groups over multiple clusters
+
+Function to aid in parallelization of label.transmissions by extracting label info and calling label.transmissions.
+Not intended for use outside of label.transmission.wrapper.
 }

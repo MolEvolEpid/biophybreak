@@ -489,39 +489,35 @@ label.transmissions <- function(MCMCstate, labels, infector.posterior.probabilit
   }
 }
 
-#function to extract label info and call label.transmissions
-lt.miniwrap <- function(x, df, labelname, permute_test, nPermute, percentiles){
-  #find number of individuals in cluster
-  nInd <- length(unique(x$MCMCstate$d$hostnames))
-  #find dataframe indices of individuals in this cluster
-  df_indices <- sapply(x$MCMCstate$d$hostnames[1:nInd], 
-                       FUN = function(host, df){which(df$patient_ID == host)},
-                       df = df)
-  label.transmission <- label.transmissions(MCMCstate = x$MCMCstate, 
-                                            labels = as.factor(df[labelname][[1]])[df_indices], 
-                                            infector.posterior.probabilities = phybreak.infector.posts(x$MCMCstate)$post_support,
-                                            permute_test = permute_test,
-                                            nPermute = nPermute,
-                                            percentiles = percentiles)
-}
-
 #' @title Find transmission rates between individuals with certain labels over multiple clusters
 #' @description Function to find the expected number of transmission between and within individuals 
 #' that belong to certain groups over multiple clusters
-#' @param output A list output as from run.biophybreak
+#' @param output A list output as from run.biophybreak. Does not need to be specified if filenames and filepath are provided.
+#' For large datasets, use of filenames and filepath is recommended instead
+#' @param filenames A vector of file names of output from biophybreak
+#' @param filepath The path to the biophybreak MCMC output (should include trailing "/")
 #' @param df A dataframe as from prepare.HIV.data
 #' @param labelname The name of the column in df to use as the label
 #' @param permute_test Whether or not to run a permutation test of how the individuals are labeled 
 #' to find a null distribution for the label transmission rates
 #' @param nPermute Number of permutations to use in the permutation test
 #' @param percentiles Percentiles at which to find quantiles from the null distribution (only affects individual cluster results)
+#' @param max.cores The maximum number of cores to use for parallel processing
 #' @return A list containing the individual cluster outputs from label.transmissions, 
 #' the overall matrix of transmission rates, an array of the null transmission rate samples from the permutation test, 
 #' the percentiles of each label transmission rate, and the raw p values for
 #' @export
 #' 
-label.transmissions.wrapper <- function(output, df, labelname, 
-                                        permute_test = TRUE, nPermute = 10000, percentiles = c(0.025, 0.975)){
+label.transmissions.wrapper <- function(output = NULL, filenames = NULL, filepath = NULL, 
+                                        df, 
+                                        labelname, 
+                                        permute_test = TRUE, nPermute = 10000, percentiles = c(0.025, 0.975),
+                                        max.cores = parallel::detectCores()){
+  if(is.null(output)){
+    if(is.null(filenames) || is.null(filepath)){
+      stop("Either MCMC output or filename and filepath must be provided")
+    }
+  }
   if(!(labelname %in% names(df))) stop("That labelname is not in df")
   #make it load stuff separately to allow larger datasets?
   nClust <- length(output)
@@ -540,14 +536,50 @@ label.transmissions.wrapper <- function(output, df, labelname,
   #number of unique labels
   nLabels <- length(label.levels)
   
-  lt.wrapped <- parallel::mclapply(output, FUN = lt.miniwrap, 
-                                   df = df,
-                                   labelname = labelname,
-                                   permute_test = permute_test,
-                                   nPermute = nPermute,
-                                   percentiles = percentiles,
-                                   mc.preschedule = FALSE,
-                                   mc.cores = parallel::detectCores())
+#function to extract label info and call label.transmissions
+#' @title Intermediary wrapper for label.transmissions
+#' @description
+#' Function to aid in parallelization of label.transmissions by extracting label info and calling label.transmissions.
+#' Not intended for use outside of label.transmission.wrapper.
+#' @export
+lt.miniwrap <- function(x = NULL, filename = NULL, filepath = NULL, df, labelname, permute_test, nPermute, percentiles){
+  #load MCMC output if not provided
+  if(is.null(x)){
+    if(!is.null(filename) && !is.null(filepath)){
+      load(paste0(filepath, filename))
+      x <- output
+    } else{
+      stop("Either MCMC output or filename and filepath must be provided")
+    }
+  }
+  #find number of individuals in cluster
+  nInd <- length(unique(x$MCMCstate$d$hostnames))
+  #find dataframe indices of individuals in this cluster
+  df_indices <- sapply(x$MCMCstate$d$hostnames[1:nInd], 
+                       FUN = function(host, df){which(df$patient_ID == host)},
+                       df = df)
+  label.transmission <- label.transmissions(MCMCstate = x$MCMCstate, 
+                                            labels = as.factor(df[labelname][[1]])[df_indices], 
+                                            infector.posterior.probabilities = phybreak.infector.posts(x$MCMCstate)$post_support,
+                                            permute_test = permute_test,
+                                            nPermute = nPermute,
+                                            percentiles = percentiles)
+}
+  
+  #setup for parallel processing
+  cl <- parallel::makePSOCKcluster(min(max.cores, max(length(output), length(filenames))))
+  parallel::clusterEvalQ(cl, library(biophybreak))
+  
+  lt.wrapped <- parallel::clusterMap(cl,
+                                     fun = lt.miniwrap, 
+                                     filename = filenames,
+                                     filepath = filepath,
+                                     df = list(df),
+                                     labelname = list(labelname),
+                                     permute_test = permute_test,
+                                     nPermute = nPermute,
+                                     percentiles = list(percentiles))
+  parallel::stopCluster(cl)
   
   #combine label transmission and permutation test results
   all.label.transmissions.mean <- matrix(0, nrow = dim(lt.wrapped[[1]]$label.transmissions.mean)[1], 
