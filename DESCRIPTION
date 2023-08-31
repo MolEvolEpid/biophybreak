@@ -25,7 +25,7 @@ Imports:
     stats,
     stringr,
     utils,
-    sp,
+    sf,
     rjags,
     mvtnorm,
     ggplot2,
