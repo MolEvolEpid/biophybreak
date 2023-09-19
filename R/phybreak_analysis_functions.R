@@ -391,6 +391,19 @@ find_cdf <- function(x,y){
   return(cdf_norm)
 }
 
+#function to generate uninformed random transmission tree
+#(infectors chosen uniformly from all possible infectors)
+rtrans_tree_unif <- function(nInds){
+  infectors.rand <- integer(length = nInds)
+  infectors.rand[c(1,2)] <- c(0,1)
+  if(nInds > 2){
+    for(i in 3:nInds){
+      infectors.rand[i] <- sample(i-1,1) #pick random individual from 1 to i-1
+    }
+  }
+  return(infectors.rand)
+}
+
 #' @title Find transmission rates between individuals with certain labels
 #' @description Function to find the expected number of transmission between and within individuals 
 #' that belong to certain groups 
@@ -451,6 +464,8 @@ label.transmissions <- function(MCMCstate, labels, infector.posterior.probabilit
     samples <- sample(seq_len(nSample), nPermute, replace = TRUE)
     #find infectors
     infectors <- MCMCstate$s$infectors[,samples]
+    #uniformly chosen infectors for null distribution
+    infectors.null <- sapply(rep(nInd,nPermute), FUN = rtrans_tree_unif)
     #matrix for number of transmissions between pairs of labels
     label.transmissions.boot <- array(0, dim = c(nLabels, nLabels, nPermute))
     #matrix for number of transmissions between pairs of labels
@@ -461,8 +476,10 @@ label.transmissions <- function(MCMCstate, labels, infector.posterior.probabilit
         if(infectors[j,i] != 0){
           label.transmissions.boot[which(label.levels == labels[j]), which(label.levels == labels[infectors[j,i]]),i] <-
             label.transmissions.boot[which(label.levels == labels[j]), which(label.levels == labels[infectors[j,i]]),i] + 1
-          label.transmissions.null[which(label.levels == labels.perm[[i]][j]), which(label.levels == labels.perm[[i]][infectors[j,i]]),i] <-
-            label.transmissions.null[which(label.levels == labels.perm[[i]][j]), which(label.levels == labels.perm[[i]][infectors[j,i]]),i] + 1
+        }
+        if(infectors.null[j,i] != 0){
+          label.transmissions.null[which(label.levels == labels.perm[[i]][j]), which(label.levels == labels.perm[[i]][infectors.null[j,i]]),i] <-
+            label.transmissions.null[which(label.levels == labels.perm[[i]][j]), which(label.levels == labels.perm[[i]][infectors.null[j,i]]),i] + 1
         }
       }
       #labels_permute <- sample(labels, replace = FALSE)
