@@ -166,6 +166,9 @@ post.sam.trans.adjust <- function(t_sam, t_inf, post.sam.trans.rate){
 #' @param mut_model The mutation model to be used if seq-gen is used for sequences, 
 #' which can be "env" or "pol" for the HIV-1 envelope or polymerase genes
 #' @param user_seqs User provided sequences to be used if seq-gen is not used, in order of sampling time
+#' @param user_seq_hosts The hosts of the user-provided sequences
+#' @param user_seq_names The names of the user-provided sequences
+#' @param anc_seq The ancestral sequence for seq-gen to use as the root state
 #' @param sim_index The name of the tree for saving files. 
 #' @param tree_loc The directory in which to output saved tree files.
 #' Defaults to an empty character, resulting in saving in the current directory.
@@ -183,6 +186,7 @@ sim.coal.phybreak <- function(tt,
                               user_seqs = NULL,
                               user_seq_hosts = NULL,
                               user_seq_names = NULL,
+                              anc_seq = NULL,
                               sim_index = 1,
                               tree_loc = "", #location to store the tree and sequence files
                               seed = sample(2e9, 1)){
@@ -227,17 +231,34 @@ sim.coal.phybreak <- function(tt,
   
   if(is.null(user_seqs)){
     #make sequences with seq-gen if none are provided
-    #TODO how long does this take? could two processes try to do this at the same time?
-    #tree_file <- paste0(tree_loc, "trees/tree_newick_", nInd, "_", sim_index, "_", seed, ".tree") #TODO make trees folder if it doesn't exist
+    #tree_file <- paste0(tree_loc, "trees/tree_newick_", nInd, "_", sim_index, "_", seed, ".tree")
     #seq_file <- paste0(tree_loc, "trees/seqs_", nInd, "_", sim_index, "_", seed, ".dat")
     #write(tree, file = tree_file) 
+    #modify tree file to include ancestral sequence, if provided
+    if(!is.null(anc_seq)){
+      #find length of ancestral sequences
+      seq.length <- length(strsplit(anc_seq, split = "")[[1]])
+      #include ancestral sequence and other formatting needed with it
+      tree <- paste(paste0("1 ", seq.length), 
+                    paste0("Anc ", anc_seq), 
+                    1, 
+                    tree, 
+                    sep = "\n")
+      #flag for including ancestral sequence
+      anc.seq.flag <- " -k1"
+    } else{
+      #default to 1000 if no sequence is given
+      seq.length <- 1000
+      #do not include flag to use ancestral sequence
+      anc.seq.flag <- ""
+    }
     if(mut_model == "env"){
       #envelope values
       #system(paste0("./seq-gen -m GTR -l 1000 -a .38 -i .3 -s .0083",
       #              " -r 1.71, 2.88, .535, .359, 2.37, .677", #upper triangle of rate matrix
       #              " -f .4627,.1474,.1598,.2302 -z ", seed, #nucleotide frequencies
       #              " < ", tree_file, " > ", seq_file))
-      seqs_phyclust <- phyclust::seqgen(opts = paste0("-mGTR -l1000 -g4 -a0.38 -i0.3 -s0.0083",
+      seqs_phyclust <- phyclust::seqgen(opts = paste0("-mGTR -l", seq.length, " -g4 -a0.38 -i0.3 -s0.0083",  anc.seq.flag,
                                                       " -r1.71,2.88,0.535,0.359,2.37,0.677", #upper triangle of rate matrix
                                                       " -f0.4627,0.1474,0.1598,0.2302 -or"),
                                         newick.tree = tree)
@@ -247,10 +268,14 @@ sim.coal.phybreak <- function(tt,
       #              " -r 1.09637, 23.97305, 0.46634, 0.00023, 13.74563, 1.00000", #upper triangle of rate matrix
       #              " -f 0.39110, 0.17228,0.21614,0.22048 -z ", seed, #nucleotide frequencies
       #              " < ", tree_file, " > ", seq_file))
-      seqs_phyclust <- phyclust::seqgen(opts = paste0("-mGTR -l1000 -g4 -a0.015 -i0.255 -s0.00241",
+      seqs_phyclust <- phyclust::seqgen(opts = paste0("-mGTR -l", seq.length, " -g4 -a0.015 -i0.255 -s0.00241",  anc.seq.flag,
                                                       " -r1.09637,23.97305,0.46634,0.00023,13.74563,1.00000", #upper triangle of rate matrix
                                                       " -f0.39110,0.17228,0.21614,0.22048 -or"),
                                         newick.tree = tree)
+      #seqs_phyclust <- phyclust::seqgen(opts = paste0("-mGTR -l1000 -g4 -a0.015 -i0.255 -s0.00241",
+      #                                                " -r1.09637,23.97305,0.46634,0.00023,13.74563,1.00000", #upper triangle of rate matrix
+      #                                                " -f0.39110,0.17228,0.21614,0.22048 -or"),
+      #                                  newick.tree = tree)
     }
     #system(paste0("./seq-gen -m GTR -l 1000 -s .001 -f .389,.165,.228,.219 -z ", seed, " < ", tree_file, " > ", seq_file))
     #https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3511177/

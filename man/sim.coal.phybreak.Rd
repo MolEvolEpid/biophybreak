@@ -18,6 +18,7 @@ sim.coal.phybreak(
   user_seqs = NULL,
   user_seq_hosts = NULL,
   user_seq_names = NULL,
+  anc_seq = NULL,
   sim_index = 1,
   tree_loc = "",
   seed = sample(2e+09, 1)
@@ -70,6 +71,12 @@ Has no effect for the index case.}
 which can be "env" or "pol" for the HIV-1 envelope or polymerase genes}
 
 \item{user_seqs}{User provided sequences to be used if seq-gen is not used, in order of sampling time}
+
+\item{user_seq_hosts}{The hosts of the user-provided sequences}
+
+\item{user_seq_names}{The names of the user-provided sequences}
+
+\item{anc_seq}{The ancestral sequence for seq-gen to use as the root state}
 
 \item{sim_index}{The name of the tree for saving files.}
 
