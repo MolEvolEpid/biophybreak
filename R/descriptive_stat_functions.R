@@ -190,30 +190,38 @@ descriptive.plots <- function(df,
   #proportion of swedish born people
   prop_swe <- sapply(df_split, FUN = function(x) mean(x$birth_location == "SWE"))
   
+  p_gender_dist <- ggplot2::ggplot(data = data.frame(dist = prop_male), ggplot2::aes(x = dist)) + 
+    ggplot2::geom_bar(stat = "count") +
+    ggplot2::xlab("Proportion Male") +
+    ggplot2::ylab("Number of Clusters") +
+    ggplot2::theme_bw()
+  
   if(save_plots) pdf(file = paste0(run_set_title, "_gender_dist.pdf"), width = width, height = height)
-  plot(ggplot2::ggplot(data = data.frame(dist = prop_male), ggplot2::aes(x = dist)) + 
-         ggplot2::geom_bar(stat = "count") +
-         ggplot2::xlab("Proportion Male") +
-         ggplot2::ylab("Number of Clusters") +
-         ggplot2::theme_bw())
+  plot(p_gender_dist)
   if(save_plots) dev.off()
+  
+  p_gender_dist_clust_size <- ggplot2::ggplot(data = data.frame(dist = prop_male, nInds = nInds), 
+                                              ggplot2::aes(x = dist, y = nInds)) +
+    ggplot2::geom_jitter(col = "#00000030") +
+    ggplot2::xlab("Proportion Male") +
+    ggplot2::ylab("Number of Individuals in Cluster") +
+    ggplot2::theme_bw() +
+    ggplot2::scale_y_log10(breaks = c(2^(0:ceiling(max(nInds)))))
   
   if(save_plots) pdf(file = paste0(run_set_title, "_gender_dist_clust_size.pdf"), width = width, height = height)
-  plot(prop_male+rnorm(nClust, 0, .015), 
-       nInds+(nInds*rnorm(nClust, 0, .04)), 
-       pch = 16, col = "#00000060", 
-       log = 'y',
-       xlab = "Proportion Male", ylab = "Number of Individuals in Cluster",
-       yaxt = 'n')
-  axis(2, at = 2^(0:7))
+  plot(p_gender_dist_clust_size)
   if(save_plots) dev.off()
   
-  if(save_plots) pdf(file = paste0(run_set_title, "_risk_dist.pdf"), width = width, height = height)
-  plot(ggplot2::ggplot(df, ggplot2::aes(risk_group)) + 
-         ggplot2::geom_bar(stat = "count") +
-         ggplot2::xlab("Risk Group") +
-         ggplot2::ylab("Number of Individuals") +
-         ggplot2::theme_bw())
+  df$risk_group <- as.factor(df$risk_group)
+  
+  p_route_dist <- ggplot2::ggplot(df, ggplot2::aes(risk_group)) + 
+    ggplot2::geom_bar(stat = "count") +
+    ggplot2::xlab("Suspected Transmission Route") +
+    ggplot2::ylab("Number of Individuals") +
+    ggplot2::theme_bw()
+  
+  if(save_plots) pdf(file = paste0(run_set_title, "_route_dist.pdf"), width = width, height = height)
+  plot(p_route_dist)
   if(save_plots) dev.off()
   
   #turn "NA"s into "Unknown" (maybe this is not safe if a dataset uses "NA" for "North America"?)
@@ -234,12 +242,25 @@ descriptive.plots <- function(df,
   birth_loc_cutoff <- df$birth_location
   birth_loc_cutoff[which(birth_loc_cutoff %in% other_birth_names)] <- "other"
   
+  #find number of each
+  birth_table_cutoff <- table(birth_loc_cutoff)
+  #put in order from most common to least common
+  ordered_levels <- names(birth_table_cutoff)[order(birth_table_cutoff, decreasing = TRUE)]
+  #put "other" at the end
+  ordered_levels <- ordered_levels[-which(ordered_levels == "other")]
+  ordered_levels <- c(ordered_levels, "other")
+  #data frame of with ordered factor levels
+  df_birth <- data.frame(b = factor(birth_loc_cutoff, 
+                                    levels = ordered_levels))
+  
+  p_birth_locs <- ggplot2::ggplot(data = df_birth, ggplot2::aes(x = b)) + 
+    ggplot2::geom_bar(stat = "count") +
+    ggplot2::xlab("Birth Location") + 
+    ggplot2::ylab("Number of Individuals") + 
+    ggplot2::theme_bw()
+  
   if(save_plots) pdf(file = paste0(run_set_title, "_birth_locs.pdf"), width = width, height = height)
-  plot(ggplot2::ggplot(data = data.frame(b = birth_loc_cutoff), ggplot2::aes(x = b)) + 
-         ggplot2::geom_bar(stat = "count") +
-         ggplot2::xlab("Birth Location") + 
-         ggplot2::ylab("Number of Individuals") + 
-         ggplot2::theme_bw())
+  plot(p_birth_locs)
   if(save_plots) dev.off()
   
   inf_table <- table(df$suspected_infection_location)
@@ -253,11 +274,30 @@ descriptive.plots <- function(df,
   inf_loc_cutoff <- df$suspected_infection_location
   inf_loc_cutoff[which(inf_loc_cutoff %in% other_inf_names)] <- "other"
   
+  #find number of each
+  inf_table_cutoff <- table(inf_loc_cutoff)
+  #put in order from most common to least common
+  ordered_levels <- names(inf_table_cutoff)[order(inf_table_cutoff, decreasing = TRUE)]
+  #put "other" at the end
+  ordered_levels <- ordered_levels[-which(ordered_levels == "other")]
+  ordered_levels <- c(ordered_levels, "other")
+  #data frame of with ordered factor levels
+  df_inf <- data.frame(i = factor(inf_loc_cutoff, 
+                                  levels = ordered_levels))
+  
+  p_inf_locs <- ggplot2::ggplot(data = df_inf, ggplot2::aes(x = i)) + 
+    ggplot2::geom_bar(stat = "count") +
+    ggplot2::xlab("Suspected Infection Location") + 
+    ggplot2::ylab("Number of Individuals") + 
+    ggplot2::theme_bw()
+  
   if(save_plots) pdf(file = paste0(run_set_title, "_inf_locs.pdf"), width = width, height = height)
-  plot(ggplot2::ggplot(data = data.frame(i = inf_loc_cutoff), ggplot2::aes(x = i)) + 
-         ggplot2::geom_bar(stat = "count") +
-         ggplot2::xlab("Suspected Infection Location") + 
-         ggplot2::ylab("Number of Individuals") + 
-         ggplot2::theme_bw())
+  plot(p_inf_locs)
   if(save_plots) dev.off()
+  
+  return(list(p_gender_dist = p_gender_dist,
+              p_gender_dist_clust_size = p_gender_dist_clust_size,
+              p_route_dist = p_route_dist,
+              p_birth_locs = p_birth_locs,
+              p_inf_locs = p_inf_locs))
 }
