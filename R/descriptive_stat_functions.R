@@ -184,6 +184,17 @@ descriptive.plots <- function(df,
   #find cluster sizes
   nInds <- sapply(df_split, FUN = function(x) dim(x)[1])
   
+  p_cluster_sizes <- ggplot2::ggplot(data = data.frame(nInds = as.factor(nInds)), ggplot2::aes(x = nInds)) + 
+    ggplot2::geom_bar(stat = "count") +
+    ggplot2::xlab("Number of Individuals in Cluster") +
+    ggplot2::ylab("Number of Clusters") +
+    ggplot2::theme_bw() +
+    ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0,0.05)), limits = c(0, NA))
+  
+  if(save_plots) pdf(file = paste0(run_set_title, "_cluster_sizes.pdf"), width = width, height = height)
+  plot(p_cluster_sizes)
+  if(save_plots) dev.off()
+  
   #find proportion of males in each cluster
   prop_male <- sapply(df_split, FUN = function(x) mean(x$gender == "M"))
   
@@ -194,7 +205,8 @@ descriptive.plots <- function(df,
     ggplot2::geom_bar(stat = "count") +
     ggplot2::xlab("Proportion Male") +
     ggplot2::ylab("Number of Clusters") +
-    ggplot2::theme_bw()
+    ggplot2::theme_bw() +
+    ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0,0.05)), limits = c(0, NA))
   
   if(save_plots) pdf(file = paste0(run_set_title, "_gender_dist.pdf"), width = width, height = height)
   plot(p_gender_dist)
@@ -218,7 +230,8 @@ descriptive.plots <- function(df,
     ggplot2::geom_bar(stat = "count") +
     ggplot2::xlab("Suspected Transmission Route") +
     ggplot2::ylab("Number of Individuals") +
-    ggplot2::theme_bw()
+    ggplot2::theme_bw() + 
+    ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0,0.05)), limits = c(0, NA))
   
   if(save_plots) pdf(file = paste0(run_set_title, "_route_dist.pdf"), width = width, height = height)
   plot(p_route_dist)
@@ -257,7 +270,8 @@ descriptive.plots <- function(df,
     ggplot2::geom_bar(stat = "count") +
     ggplot2::xlab("Birth Location") + 
     ggplot2::ylab("Number of Individuals") + 
-    ggplot2::theme_bw()
+    ggplot2::theme_bw() + 
+    ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0,0.05)), limits = c(0, NA))
   
   if(save_plots) pdf(file = paste0(run_set_title, "_birth_locs.pdf"), width = width, height = height)
   plot(p_birth_locs)
@@ -289,13 +303,15 @@ descriptive.plots <- function(df,
     ggplot2::geom_bar(stat = "count") +
     ggplot2::xlab("Suspected Infection Location") + 
     ggplot2::ylab("Number of Individuals") + 
-    ggplot2::theme_bw()
+    ggplot2::theme_bw() + 
+    ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0,0.05)), limits = c(0, NA))
   
   if(save_plots) pdf(file = paste0(run_set_title, "_inf_locs.pdf"), width = width, height = height)
   plot(p_inf_locs)
   if(save_plots) dev.off()
   
-  return(list(p_gender_dist = p_gender_dist,
+  return(list(p_cluster_sizes = p_cluster_sizes,
+              p_gender_dist = p_gender_dist,
               p_gender_dist_clust_size = p_gender_dist_clust_size,
               p_route_dist = p_route_dist,
               p_birth_locs = p_birth_locs,
