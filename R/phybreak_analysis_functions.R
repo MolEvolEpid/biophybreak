@@ -678,11 +678,17 @@ label.transmissions.wrapper <- function(output, filenames = NULL, filepath = NUL
     dim(equal_permutes) <- c(nLabels, nLabels)
     percentiles <- matrix(NA, nrow = nLabels, ncol = nLabels)
     pval_uncor <- matrix(1, nrow = nLabels, ncol = nLabels)
+    #find means of nulls keeping within-cluster label distributions
+    all.label.transmissions.null.mean <- apply(all.label.transmissions.null, MARGIN = c(1,2), FUN = mean)
     if(between.clust.bs){
       equal_permutes_bc <- vector(mode = "list", length = nLabels^2)
       dim(equal_permutes_bc) <- c(nLabels, nLabels)
       percentiles_bc <- matrix(NA, nrow = nLabels, ncol = nLabels)
       pval_uncor_bc <- matrix(1, nrow = nLabels, ncol = nLabels)
+      equal_permutes_null_bc <- vector(mode = "list", length = nLabels^2)
+      dim(equal_permutes_null_bc) <- c(nLabels, nLabels)
+      percentiles_null_bc <- matrix(NA, nrow = nLabels, ncol = nLabels)
+      pval_uncor_null_bc <- matrix(1, nrow = nLabels, ncol = nLabels)
     }
     for(i in seq_len(nLabels)){
       for(j in seq_len(nLabels)){
@@ -707,6 +713,7 @@ label.transmissions.wrapper <- function(output, filenames = NULL, filepath = NUL
         if(between.clust.bs){ #between cluster measures
           null.sorted_bc <- sort(all.label.transmissions.bcbs[i,j,])
           equal_permutes_bc[[i,j]] <- which(null.sorted_bc == all.label.transmissions.mean[i,j])
+          equal_permutes_null_bc[[i,j]] <- which(null.sorted_bc == all.label.transmissions.null.mean[i,j])
           if(length(equal_permutes_bc[[i,j]]) > 0){
             #print(length(equal_permutes[[i,j]]))
             percentiles_bc[i,j] <- (min(equal_permutes_bc[[i,j]]-1)+max(equal_permutes_bc[[i,j]]-1))/(2*(nPermute-1))
@@ -723,19 +730,43 @@ label.transmissions.wrapper <- function(output, filenames = NULL, filepath = NUL
               pval_uncor_bc[i,j] <- max(pval_uncor_bc[i,j], 2/(nPermute-1))
             }
           }
+          if(length(equal_permutes_null_bc[[i,j]]) > 0){
+            #print(length(equal_permutes[[i,j]]))
+            percentiles_null_bc[i,j] <- (min(equal_permutes_bc[[i,j]]-1)+max(equal_permutes_bc[[i,j]]-1))/(2*(nPermute-1))
+            #print(quant)
+            pval_uncor_bc[i,j] <- min(percentiles_bc[i,j], 1-percentiles_bc[i,j])*2
+          } else{
+            if(all(null.sorted_bc <= all.label.transmissions.null.mean[i,j])){
+              percentiles_null_bc[i,j] <- 1
+              pval_uncor_null_bc[i,j] <- 2/(nPermute-1)
+            } else{
+              percentiles_null_bc[i,j] <- min(which(sort(all.label.transmissions.bcbs[i,j,]) > all.label.transmissions.null.mean[i,j])-1)/(nPermute-1)
+              pval_uncor_null_bc[i,j] <- min(percentiles_null_bc[i,j], 1-percentiles_null_bc[i,j])*2
+              #don't let p value be 0
+              pval_uncor_null_bc[i,j] <- max(pval_uncor_bc[i,j], 2/(nPermute-1))
+            }
+          }
         }
       }
     }
-    #add names to percentiles and p values
+    #add names to percentiles, p values, and null means
     rownames(percentiles) <- rownames(all.label.transmissions.mean)
     colnames(percentiles) <- colnames(all.label.transmissions.mean)
     rownames(pval_uncor) <- rownames(all.label.transmissions.mean)
     colnames(pval_uncor) <- colnames(all.label.transmissions.mean)
+    rownames(all.label.transmissions.null.mean) <- rownames(all.label.transmissions.mean)
+    colnames(all.label.transmissions.null.mean) <- colnames(all.label.transmissions.mean)
     if(between.clust.bs){
+      #actual compared to between cluster bootstrapping
       rownames(percentiles_bc) <- rownames(all.label.transmissions.mean)
       colnames(percentiles_bc) <- colnames(all.label.transmissions.mean)
       rownames(pval_uncor_bc) <- rownames(all.label.transmissions.mean)
       colnames(pval_uncor_bc) <- colnames(all.label.transmissions.mean)
+      #clustering info compared to between cluster bootstrapping
+      rownames(percentiles_null_bc) <- rownames(all.label.transmissions.mean)
+      colnames(percentiles_null_bc) <- colnames(all.label.transmissions.mean)
+      rownames(pval_uncor_null_bc) <- rownames(all.label.transmissions.mean)
+      colnames(pval_uncor_null_bc) <- colnames(all.label.transmissions.mean)
     }
     #add names to bootstrapped and null samples
     dimnames(all.label.transmissions.boot) <- list(to = rownames(all.label.transmissions.mean), 
@@ -752,14 +783,17 @@ label.transmissions.wrapper <- function(output, filenames = NULL, filepath = NUL
     if(between.clust.bs){
       return(list(lt.wrapped = lt.wrapped, 
                   all.label.transmissions.mean = all.label.transmissions.mean, 
+                  all.label.transmissions.null.mean = all.label.transmissions.null.mean, 
                   all.label.transmissions.boot = all.label.transmissions.boot,
                   all.label.transmissions.null = all.label.transmissions.null,
                   all.label.transmissions.bcbs = all.label.transmissions.bcbs,
                   percentiles = percentiles, pval_uncor = pval_uncor,
-                  percentiles_bc = percentiles_bc, pval_uncor_bc = pval_uncor_bc))
+                  percentiles_bc = percentiles_bc, pval_uncor_bc = pval_uncor_bc,
+                  percentiles_null_bc = percentiles_null_bc, pval_uncor_null_bc = pval_uncor_null_bc))
     }
     return(list(lt.wrapped = lt.wrapped, 
                 all.label.transmissions.mean = all.label.transmissions.mean, 
+                all.label.transmissions.null.mean = all.label.transmissions.null.mean, 
                 all.label.transmissions.boot = all.label.transmissions.boot,
                 all.label.transmissions.null = all.label.transmissions.null,
                 percentiles = percentiles, pval_uncor = pval_uncor))
