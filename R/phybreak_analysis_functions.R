@@ -414,6 +414,9 @@ rtrans_tree_unif <- function(nInds){
 #' @param permute_test Whether or not to run a permutation test of how the individuals are labeled 
 #' to find a null distribution for the label transmission rates
 #' @param nPermute Number of permutations to use in the permutation test
+#' @param between.clust.bs Whether or not the bootstrapping should include demographic label randomization between clusters as well as within clusters
+#' @param label.levels The labels of the demographic groups of interest. 
+#' @param label.probs The overall proportions of labels across the clusters of interest
 #' @param percentiles Percentiles at which to find quantiles from the null distribution
 #' @return A matrix containing the the probabilities for each individual to be infected by a sampled individual of a certain label
 #' and a matrix with the number of transmissions between and within individuals with each label
@@ -549,6 +552,7 @@ label.transmissions <- function(MCMCstate, labels, infector.posterior.probabilit
 #' @param permute_test Whether or not to run a permutation test of how the individuals are labeled 
 #' to find a null distribution for the label transmission rates
 #' @param nPermute Number of permutations to use in the permutation test
+#' @param between.clust.bs Whether or not the bootstrapping should include demographic label randomization between clusters as well as within clusters
 #' @param percentiles Percentiles at which to find quantiles from the null distribution (only affects individual cluster results)
 #' @param max.cores The maximum number of cores to use for parallel processing
 #' @return A list containing the individual cluster outputs from label.transmissions, 

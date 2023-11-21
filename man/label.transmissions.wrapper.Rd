@@ -5,19 +5,20 @@
 \title{Find transmission rates between individuals with certain labels over multiple clusters}
 \usage{
 label.transmissions.wrapper(
-  output = NULL,
+  output,
   filenames = NULL,
   filepath = NULL,
   df,
   labelname,
   permute_test = TRUE,
   nPermute = 10000,
+  between.clust.bs = FALSE,
   percentiles = c(0.025, 0.975),
   max.cores = parallel::detectCores()
 )
 }
 \arguments{
-\item{output}{A list output as from run.biophybreak. Does not need to be specified if filenames and filepath are provided.
+\item{output}{A list output as from run.biophybreak. Does not need to include the 'MCMCstate's if filenames and filepath are provided.
 For large datasets, use of filenames and filepath is recommended instead}
 
 \item{filenames}{A vector of file names of output from biophybreak}
@@ -32,6 +33,8 @@ For large datasets, use of filenames and filepath is recommended instead}
 to find a null distribution for the label transmission rates}
 
 \item{nPermute}{Number of permutations to use in the permutation test}
+
+\item{between.clust.bs}{Whether or not the bootstrapping should include demographic label randomization between clusters as well as within clusters}
 
 \item{percentiles}{Percentiles at which to find quantiles from the null distribution (only affects individual cluster results)}
 

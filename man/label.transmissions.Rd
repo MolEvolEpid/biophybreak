@@ -10,6 +10,9 @@ label.transmissions(
   infector.posterior.probabilities = phybreak.infector.posts(MCMCstate)$post_support,
   permute_test = FALSE,
   nPermute = 10000,
+  between.clust.bs = FALSE,
+  label.levels = NULL,
+  label.probs = NULL,
   percentiles = c(0.025, 0.975)
 )
 }
@@ -25,6 +28,12 @@ as supplied by phybreak.infector.posts(MCMCstate)$post_support}
 to find a null distribution for the label transmission rates}
 
 \item{nPermute}{Number of permutations to use in the permutation test}
+
+\item{between.clust.bs}{Whether or not the bootstrapping should include demographic label randomization between clusters as well as within clusters}
+
+\item{label.levels}{The labels of the demographic groups of interest.}
+
+\item{label.probs}{The overall proportions of labels across the clusters of interest}
 
 \item{percentiles}{Percentiles at which to find quantiles from the null distribution}
 }
