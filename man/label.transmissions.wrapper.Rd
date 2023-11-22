@@ -41,8 +41,23 @@ to find a null distribution for the label transmission rates}
 \item{max.cores}{The maximum number of cores to use for parallel processing}
 }
 \value{
-A list containing the individual cluster outputs from label.transmissions, 
-the overall matrix of transmission rates, an array of the null transmission rate samples from the permutation test, 
+A list containing the following elements:
+\itemize{
+   \item \code{lt.wrapped} individual cluster outputs from label.transmissions
+   \item \code{all.label.transmissions.mean} the overall matrix of transmission rates
+   \item \code{all.label.transmissions.null.mean} the matrix of the mean transmission rates in the null distribution using only the clustering information
+   \item \code{all.label.transmissions.boot} all bootstrapped values for the actual group transmission rates using clustering and transmission history information
+   \item \code{all.label.transmissions.null} all bootstrapped values for the null transmission rates using only the within-cluster demographic label information
+   \item \code{all.label.transmissions.bcbs} all bootstrapped values for the null transmission rates using only the overall demographic label proportions
+   \item \code{percentiles} the percentile value of \code{all.label.transmissions.mean} with respect to \code{all.label.transmissions.null}
+   \item \code{pval_uncor} Conversion of \code{percentiles} to a two-tailed p-value
+   \item \code{percentiles_bc} the percentile value of \code{all.label.transmissions.mean} with respect to \code{all.label.transmissions.bcbs}
+   \item \code{pval_uncor_bc} Conversion of \code{percentiles_bc} to a two-tailed p-value
+   \item \code{percentiles_null_bc} the percentile value of \code{all.label.transmissions.null.mean} with respect to \code{all.label.transmissions.bcbs}
+   \item \code{pval_uncor_null_bc} Conversion of \code{percentiles_null_bc} to a two-tailed p-value
+}
+
+an array of the null transmission rate samples from the permutation test, 
 the percentiles of each label transmission rate, and the raw p values for
 }
 \description{

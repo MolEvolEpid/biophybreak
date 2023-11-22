@@ -555,8 +555,23 @@ label.transmissions <- function(MCMCstate, labels, infector.posterior.probabilit
 #' @param between.clust.bs Whether or not the bootstrapping should include demographic label randomization between clusters as well as within clusters
 #' @param percentiles Percentiles at which to find quantiles from the null distribution (only affects individual cluster results)
 #' @param max.cores The maximum number of cores to use for parallel processing
-#' @return A list containing the individual cluster outputs from label.transmissions, 
-#' the overall matrix of transmission rates, an array of the null transmission rate samples from the permutation test, 
+#' @return A list containing the following elements:
+#' \itemize{
+#'    \item \code{lt.wrapped} individual cluster outputs from label.transmissions
+#'    \item \code{all.label.transmissions.mean} the overall matrix of transmission rates
+#'    \item \code{all.label.transmissions.null.mean} the matrix of the mean transmission rates in the null distribution using only the clustering information
+#'    \item \code{all.label.transmissions.boot} all bootstrapped values for the actual group transmission rates using clustering and transmission history information
+#'    \item \code{all.label.transmissions.null} all bootstrapped values for the null transmission rates using only the within-cluster demographic label information
+#'    \item \code{all.label.transmissions.bcbs} all bootstrapped values for the null transmission rates using only the overall demographic label proportions
+#'    \item \code{percentiles} the percentile value of \code{all.label.transmissions.mean} with respect to \code{all.label.transmissions.null}
+#'    \item \code{pval_uncor} Conversion of \code{percentiles} to a two-tailed p-value
+#'    \item \code{percentiles_bc} the percentile value of \code{all.label.transmissions.mean} with respect to \code{all.label.transmissions.bcbs}
+#'    \item \code{pval_uncor_bc} Conversion of \code{percentiles_bc} to a two-tailed p-value
+#'    \item \code{percentiles_null_bc} the percentile value of \code{all.label.transmissions.null.mean} with respect to \code{all.label.transmissions.bcbs}
+#'    \item \code{pval_uncor_null_bc} Conversion of \code{percentiles_null_bc} to a two-tailed p-value
+#' }
+#' 
+#' an array of the null transmission rate samples from the permutation test, 
 #' the percentiles of each label transmission rate, and the raw p values for
 #' @export
 #' 
@@ -829,4 +844,74 @@ group.cutoff <- function(df, group_name, max_groups){
   group_cutoff <- df[,group_name]
   group_cutoff[which(group_cutoff %in% other_group_names)] <- "other"
   return(group_cutoff)
+}
+
+#
+#' @title Plot group transmission rates
+#' @description Function to make violin plots of transmission rates 
+#' between individuals with certain labels over multiple clusters
+#' @param transmission.list A list output as from "label.transmission.wrapper"
+#' @param include.null Whether or not to include the null distributions of the transmission rates given the within-cluster label demographics
+#' @param bcbs Whether or not to include the null distributions of the transmission rates given only the overall label demographics
+#' @param title A string for the title of the plot
+#' @export
+transmission.rate.violins <- function(transmission.list, include.null = FALSE, bcbs = FALSE, title = NULL){
+  rates.long <- reshape2::melt(transmission.list$all.label.transmissions.mean)
+  names(rates.long) <- c("to", "from", "value")
+  boot.long <- reshape2::melt(transmission.list$all.label.transmissions.boot)
+  null.long <- reshape2::melt(transmission.list$all.label.transmissions.null)
+  if(bcbs) bcbs.long <- reshape2::melt(transmission.list$all.label.transmissions.bcbs)
+  #add column for whether it's actual or null
+  boot.long$set <- rep("All Information", dim(boot.long)[1])
+  null.long$set <- rep("Clustering Only", dim(null.long)[1])
+  if(bcbs) bcbs.long$set <- rep("Overall Only", dim(null.long)[1])
+  #concatenate actual and null (and between cluster if present)
+  df.long <- rbind(boot.long, null.long)
+  if(bcbs) df.long <- rbind(df.long, bcbs.long)
+  
+  if(include.null){
+    ggplot(data = df.long, aes(x = to, fill = from, color = set, y = value)) + 
+      geom_violin(adjust = 6, scale = "width") + 
+      scale_color_manual(values = c("#000000", "#777777", "#EEEEEE")) + 
+      xlab("Recipient") + 
+      ylab("Number of Transmissions") +
+      labs(fill = "Source", color = "Information") +
+      ggtitle(title) +
+      theme_bw() +
+      scale_y_continuous(expand = expansion(mult = c(0,0.05)), limits = c(0, NA))
+  } else{
+    fromTo <- paste(boot.long$from, boot.long$to, sep = " to ")
+    boot.long$fromTo <- fromTo
+    fromTo_unique <- unique(fromTo)
+    empty_indices <- c()
+    for(i in seq_along(fromTo_unique)){
+      indices <- which(fromTo == fromTo_unique[i])
+      if(sum(boot.long$value[indices]) == 0){
+        empty_indices <- c(empty_indices,indices)
+      }
+    }
+    if(is.null(empty_indices)){
+      df.fromTo <- boot.long
+    } else{
+      df.fromTo <- boot.long[-empty_indices,]
+    }
+    
+    #decide whether angle should be changed (based on length of fromTo_unique)
+    if(length(fromTo_unique) > 8){
+      label_angle <- 90
+    } else{
+      label_angle <- 0
+    }
+    
+    #plot actual numbers of transmissions, omitting categories with 0 transmissions
+    ggplot(data = df.fromTo, aes(x = fromTo, y = value, fill = fromTo)) + 
+      geom_violin(adjust = 6, scale = "width") +
+      xlab("Transmission Type") +
+      ylab("Number of Transmissions") +
+      ggtitle(title) +
+      theme_bw() + 
+      scale_fill_discrete(guide = "none") +
+      scale_x_discrete(guide = guide_axis(angle = label_angle)) +
+      scale_y_continuous(expand = expansion(mult = c(0,0.05)), limits = c(0, NA))
+  }
 }
