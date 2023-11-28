@@ -870,15 +870,15 @@ transmission.rate.violins <- function(transmission.list, include.null = FALSE, b
   if(bcbs) df.long <- rbind(df.long, bcbs.long)
   
   if(include.null){
-    ggplot(data = df.long, aes(x = to, fill = from, color = set, y = value)) + 
-      geom_violin(adjust = 6, scale = "width") + 
-      scale_color_manual(values = c("#000000", "#777777", "#EEEEEE")) + 
-      xlab("Recipient") + 
-      ylab("Number of Transmissions") +
-      labs(fill = "Source", color = "Information") +
-      ggtitle(title) +
-      theme_bw() +
-      scale_y_continuous(expand = expansion(mult = c(0,0.05)), limits = c(0, NA))
+    ggplot2::ggplot(data = df.long, ggplot2::aes(x = to, fill = from, color = set, y = value)) + 
+      ggplot2::geom_violin(adjust = 6, scale = "width") + 
+      ggplot2::scale_color_manual(values = c("#000000", "#777777", "#EEEEEE")) + 
+      ggplot2::xlab("Recipient") + 
+      ggplot2::ylab("Number of Transmissions") +
+      ggplot2::labs(fill = "Source", color = "Information") +
+      ggplot2::ggtitle(title) +
+      ggplot2::theme_bw() +
+      ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0,0.05)), limits = c(0, NA))
   } else{
     fromTo <- paste(boot.long$from, boot.long$to, sep = " to ")
     boot.long$fromTo <- fromTo
@@ -904,14 +904,14 @@ transmission.rate.violins <- function(transmission.list, include.null = FALSE, b
     }
     
     #plot actual numbers of transmissions, omitting categories with 0 transmissions
-    ggplot(data = df.fromTo, aes(x = fromTo, y = value, fill = fromTo)) + 
-      geom_violin(adjust = 6, scale = "width") +
-      xlab("Transmission Type") +
-      ylab("Number of Transmissions") +
-      ggtitle(title) +
-      theme_bw() + 
-      scale_fill_discrete(guide = "none") +
-      scale_x_discrete(guide = guide_axis(angle = label_angle)) +
-      scale_y_continuous(expand = expansion(mult = c(0,0.05)), limits = c(0, NA))
+    ggplot2::ggplot(data = df.fromTo, aes(x = fromTo, y = value, fill = fromTo)) + 
+      ggplot2::geom_violin(adjust = 6, scale = "width") +
+      ggplot2::xlab("Transmission Type") +
+      ggplot2::ylab("Number of Transmissions") +
+      ggplot2::ggtitle(title) +
+      ggplot2::theme_bw() + 
+      ggplot2::scale_fill_discrete(guide = "none") +
+      ggplot2::scale_x_discrete(guide = ggplot2::guide_axis(angle = label_angle)) +
+      ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0,0.05)), limits = c(0, NA))
   }
 }
