@@ -46,6 +46,7 @@ A list containing the following elements:
    \item \code{lt.wrapped} individual cluster outputs from label.transmissions
    \item \code{all.label.transmissions.mean} the overall matrix of transmission rates
    \item \code{all.label.transmissions.null.mean} the matrix of the mean transmission rates in the null distribution using only the clustering information
+   \item \code{all.label.transmissions.bcbs.mean} the matrix of the mean transmission rates in the null distribution using only the overall demographic label proportions
    \item \code{all.label.transmissions.boot} all bootstrapped values for the actual group transmission rates using clustering and transmission history information
    \item \code{all.label.transmissions.null} all bootstrapped values for the null transmission rates using only the within-cluster demographic label information
    \item \code{all.label.transmissions.bcbs} all bootstrapped values for the null transmission rates using only the overall demographic label proportions

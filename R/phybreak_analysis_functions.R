@@ -560,6 +560,7 @@ label.transmissions <- function(MCMCstate, labels, infector.posterior.probabilit
 #'    \item \code{lt.wrapped} individual cluster outputs from label.transmissions
 #'    \item \code{all.label.transmissions.mean} the overall matrix of transmission rates
 #'    \item \code{all.label.transmissions.null.mean} the matrix of the mean transmission rates in the null distribution using only the clustering information
+#'    \item \code{all.label.transmissions.bcbs.mean} the matrix of the mean transmission rates in the null distribution using only the overall demographic label proportions
 #'    \item \code{all.label.transmissions.boot} all bootstrapped values for the actual group transmission rates using clustering and transmission history information
 #'    \item \code{all.label.transmissions.null} all bootstrapped values for the null transmission rates using only the within-cluster demographic label information
 #'    \item \code{all.label.transmissions.bcbs} all bootstrapped values for the null transmission rates using only the overall demographic label proportions
@@ -708,6 +709,8 @@ label.transmissions.wrapper <- function(output, filenames = NULL, filepath = NUL
       dim(equal_permutes_null_bc) <- c(nLabels, nLabels)
       percentiles_null_bc <- matrix(NA, nrow = nLabels, ncol = nLabels)
       pval_uncor_null_bc <- matrix(1, nrow = nLabels, ncol = nLabels)
+      #find means of nulls with only overall label distributions
+      all.label.transmissions.bcbs.mean <- apply(all.label.transmissions.bcbs, MARGIN = c(1,2), FUN = mean)
     }
     for(i in seq_len(nLabels)){
       for(j in seq_len(nLabels)){
@@ -786,6 +789,9 @@ label.transmissions.wrapper <- function(output, filenames = NULL, filepath = NUL
       colnames(percentiles_null_bc) <- colnames(all.label.transmissions.mean)
       rownames(pval_uncor_null_bc) <- rownames(all.label.transmissions.mean)
       colnames(pval_uncor_null_bc) <- colnames(all.label.transmissions.mean)
+      #means
+      rownames(all.label.transmissions.bcbs.mean) <- rownames(all.label.transmissions.mean)
+      colnames(all.label.transmissions.bcbs.mean) <- colnames(all.label.transmissions.mean)
     }
     #add names to bootstrapped and null samples
     dimnames(all.label.transmissions.boot) <- list(to = rownames(all.label.transmissions.mean), 
@@ -803,6 +809,7 @@ label.transmissions.wrapper <- function(output, filenames = NULL, filepath = NUL
       return(list(lt.wrapped = lt.wrapped, 
                   all.label.transmissions.mean = all.label.transmissions.mean, 
                   all.label.transmissions.null.mean = all.label.transmissions.null.mean, 
+                  all.label.transmissions.bcbs.mean = all.label.transmissions.bcbs.mean, 
                   all.label.transmissions.boot = all.label.transmissions.boot,
                   all.label.transmissions.null = all.label.transmissions.null,
                   all.label.transmissions.bcbs = all.label.transmissions.bcbs,
