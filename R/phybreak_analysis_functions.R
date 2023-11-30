@@ -417,7 +417,7 @@ rtrans_tree_unif <- function(nInds){
 #' @param between.clust.bs Whether or not the bootstrapping should include demographic label randomization between clusters as well as within clusters
 #' @param label.levels The labels of the demographic groups of interest. 
 #' @param label.probs The overall proportions of labels across the clusters of interest
-#' @param percentiles Percentiles at which to find quantiles from the null distribution
+#' @param quantiles Quantiles at which to find quantiles from the null distribution
 #' @return A matrix containing the the probabilities for each individual to be infected by a sampled individual of a certain label
 #' and a matrix with the number of transmissions between and within individuals with each label
 #' @export
@@ -425,7 +425,7 @@ rtrans_tree_unif <- function(nInds){
 label.transmissions <- function(MCMCstate, labels, infector.posterior.probabilities = phybreak.infector.posts(MCMCstate)$post_support,
                                 permute_test = FALSE, nPermute = 10000, 
                                 between.clust.bs = FALSE, label.levels = NULL, label.probs = NULL,
-                                percentiles = c(0.025, 0.975)){
+                                quantiles = c(0.025, 0.975)){
   #make sure labels are a factor
   labels <- as.factor(labels)
   #return(label.probs)
@@ -509,14 +509,14 @@ label.transmissions <- function(MCMCstate, labels, infector.posterior.probabilit
     }
     
     #find quantiles for each entry of the matrix
-    quantiles.boot <- array(dim = c(nLabels, nLabels, length(percentiles)))
-    quantiles.null <- array(dim = c(nLabels, nLabels, length(percentiles)))
-    if(between.clust.bs) quantiles.bcbs <- array(dim = c(nLabels, nLabels, length(percentiles)))
-    for(i in seq_along(percentiles)){
-      quantiles.boot[,,i] <- apply(label.transmissions.boot, MARGIN = c(1,2), FUN = quantile, probs = percentiles[i])
-      quantiles.null[,,i] <- apply(label.transmissions.null, MARGIN = c(1,2), FUN = quantile, probs = percentiles[i])
+    quantiles.boot <- array(dim = c(nLabels, nLabels, length(quantiles)))
+    quantiles.null <- array(dim = c(nLabels, nLabels, length(quantiles)))
+    if(between.clust.bs) quantiles.bcbs <- array(dim = c(nLabels, nLabels, length(quantiles)))
+    for(i in seq_along(quantiles)){
+      quantiles.boot[,,i] <- apply(label.transmissions.boot, MARGIN = c(1,2), FUN = quantile, probs = quantiles[i])
+      quantiles.null[,,i] <- apply(label.transmissions.null, MARGIN = c(1,2), FUN = quantile, probs = quantiles[i])
       if(between.clust.bs){
-        quantiles.bcbs[,,i] <- apply(label.transmissions.bcbs, MARGIN = c(1,2), FUN = quantile, probs = percentiles[i])
+        quantiles.bcbs[,,i] <- apply(label.transmissions.bcbs, MARGIN = c(1,2), FUN = quantile, probs = quantiles[i])
       }
     }
     if(between.clust.bs){
@@ -553,7 +553,7 @@ label.transmissions <- function(MCMCstate, labels, infector.posterior.probabilit
 #' to find a null distribution for the label transmission rates
 #' @param nPermute Number of permutations to use in the permutation test
 #' @param between.clust.bs Whether or not the bootstrapping should include demographic label randomization between clusters as well as within clusters
-#' @param percentiles Percentiles at which to find quantiles from the null distribution (only affects individual cluster results)
+#' @param quantiles Quantiles at which to find quantiles from the null distribution (only affects individual cluster results)
 #' @param max.cores The maximum number of cores to use for parallel processing
 #' @return A list containing the following elements:
 #' \itemize{
@@ -561,6 +561,9 @@ label.transmissions <- function(MCMCstate, labels, infector.posterior.probabilit
 #'    \item \code{all.label.transmissions.mean} the overall matrix of transmission rates
 #'    \item \code{all.label.transmissions.null.mean} the matrix of the mean transmission rates in the null distribution using only the clustering information
 #'    \item \code{all.label.transmissions.bcbs.mean} the matrix of the mean transmission rates in the null distribution using only the overall demographic label proportions
+#'    \item \code{all.label.transmissions.quantile} the transmission rates at the provided quantiles
+#'    \item \code{all.label.transmissions.null.quantile} the quantile values of transmission rates in the null distribution using only the clustering information
+#'    \item \code{all.label.transmissions.bcbs.quantile} the quantile values of transmission rates in the null distribution using only the overall demographic label proportions
 #'    \item \code{all.label.transmissions.boot} all bootstrapped values for the actual group transmission rates using clustering and transmission history information
 #'    \item \code{all.label.transmissions.null} all bootstrapped values for the null transmission rates using only the within-cluster demographic label information
 #'    \item \code{all.label.transmissions.bcbs} all bootstrapped values for the null transmission rates using only the overall demographic label proportions
@@ -571,9 +574,6 @@ label.transmissions <- function(MCMCstate, labels, infector.posterior.probabilit
 #'    \item \code{percentiles_null_bc} the percentile value of \code{all.label.transmissions.null.mean} with respect to \code{all.label.transmissions.bcbs}
 #'    \item \code{pval_uncor_null_bc} Conversion of \code{percentiles_null_bc} to a two-tailed p-value
 #' }
-#' 
-#' an array of the null transmission rate samples from the permutation test, 
-#' the percentiles of each label transmission rate, and the raw p values for
 #' @export
 #' 
 label.transmissions.wrapper <- function(output, filenames = NULL, filepath = NULL, 
@@ -581,7 +581,7 @@ label.transmissions.wrapper <- function(output, filenames = NULL, filepath = NUL
                                         labelname, 
                                         permute_test = TRUE, nPermute = 10000, 
                                         between.clust.bs  = FALSE,
-                                        percentiles = c(0.025, 0.975),
+                                        quantiles = c(0.025, 0.975),
                                         max.cores = parallel::detectCores()){
   
   if(any(sapply(MCMCs_metadata, FUN = function(x) is.null(x$MCMCstate)))){
@@ -630,7 +630,7 @@ label.transmissions.wrapper <- function(output, filenames = NULL, filepath = NUL
   lt.miniwrap <- function(x = NULL, filename = NULL, filepath = NULL, df, labelname, 
                           permute_test, nPermute, 
                           between.clust.bs, label.levels, label.probs,
-                          percentiles){
+                          quantiles){
     #load MCMC output if not provided
     if(is.null(x$MCMCstate)){
       if(!is.null(filename) && !is.null(filepath)){
@@ -654,7 +654,7 @@ label.transmissions.wrapper <- function(output, filenames = NULL, filepath = NUL
                                               between.clust.bs = between.clust.bs, 
                                               label.levels = label.levels, 
                                               label.probs = label.probs,
-                                              percentiles = percentiles)
+                                              quantiles = quantiles)
   }
   
   #setup for parallel processing
@@ -672,7 +672,7 @@ label.transmissions.wrapper <- function(output, filenames = NULL, filepath = NUL
                                      between.clust.bs = between.clust.bs, 
                                      label.levels = list(label.levels), 
                                      label.probs = list(label.probs),
-                                     percentiles = list(percentiles))
+                                     quantiles = list(quantiles))
   parallel::stopCluster(cl)
   #return(lt.wrapped)
   #combine label transmission and permutation test results
@@ -698,8 +698,11 @@ label.transmissions.wrapper <- function(output, filenames = NULL, filepath = NUL
     dim(equal_permutes) <- c(nLabels, nLabels)
     percentiles <- matrix(NA, nrow = nLabels, ncol = nLabels)
     pval_uncor <- matrix(1, nrow = nLabels, ncol = nLabels)
-    #find means of nulls keeping within-cluster label distributions
+    #find quantiles of bootstrapped transmission rates (using all info)
+    all.label.transmissions.quantile <- apply(all.label.transmissions.boot, MARGIN = c(1,2), FUN = quantile, probs = quantiles)
+    #find means and quantiles of nulls keeping within-cluster label distributions
     all.label.transmissions.null.mean <- apply(all.label.transmissions.null, MARGIN = c(1,2), FUN = mean)
+    all.label.transmissions.null.quantile <- apply(all.label.transmissions.null, MARGIN = c(1,2), FUN = quantile, probs = quantiles)
     if(between.clust.bs){
       equal_permutes_bc <- vector(mode = "list", length = nLabels^2)
       dim(equal_permutes_bc) <- c(nLabels, nLabels)
@@ -709,8 +712,9 @@ label.transmissions.wrapper <- function(output, filenames = NULL, filepath = NUL
       dim(equal_permutes_null_bc) <- c(nLabels, nLabels)
       percentiles_null_bc <- matrix(NA, nrow = nLabels, ncol = nLabels)
       pval_uncor_null_bc <- matrix(1, nrow = nLabels, ncol = nLabels)
-      #find means of nulls with only overall label distributions
+      #find means and quantiles of nulls with only overall label distributions
       all.label.transmissions.bcbs.mean <- apply(all.label.transmissions.bcbs, MARGIN = c(1,2), FUN = mean)
+      all.label.transmissions.bcbs.quantile <- apply(all.label.transmissions.bcbs, MARGIN = c(1,2), FUN = quantile, probs = quantiles)
     }
     for(i in seq_len(nLabels)){
       for(j in seq_len(nLabels)){
@@ -810,6 +814,9 @@ label.transmissions.wrapper <- function(output, filenames = NULL, filepath = NUL
                   all.label.transmissions.mean = all.label.transmissions.mean, 
                   all.label.transmissions.null.mean = all.label.transmissions.null.mean, 
                   all.label.transmissions.bcbs.mean = all.label.transmissions.bcbs.mean, 
+                  all.label.transmissions.quantile = all.label.transmissions.quantile,
+                  all.label.transmissions.null.quantile = all.label.transmissions.null.quantile,
+                  all.label.transmissions.bcbs.quantile = all.label.transmissions.bcbs.quantile,
                   all.label.transmissions.boot = all.label.transmissions.boot,
                   all.label.transmissions.null = all.label.transmissions.null,
                   all.label.transmissions.bcbs = all.label.transmissions.bcbs,
@@ -819,7 +826,9 @@ label.transmissions.wrapper <- function(output, filenames = NULL, filepath = NUL
     }
     return(list(lt.wrapped = lt.wrapped, 
                 all.label.transmissions.mean = all.label.transmissions.mean, 
-                all.label.transmissions.null.mean = all.label.transmissions.null.mean, 
+                all.label.transmissions.null.mean = all.label.transmissions.null.mean,
+                all.label.transmissions.quantile = all.label.transmissions.quantile,
+                all.label.transmissions.null.quantile = all.label.transmissions.null.quantile,
                 all.label.transmissions.boot = all.label.transmissions.boot,
                 all.label.transmissions.null = all.label.transmissions.null,
                 percentiles = percentiles, pval_uncor = pval_uncor))

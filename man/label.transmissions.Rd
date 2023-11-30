@@ -13,7 +13,7 @@ label.transmissions(
   between.clust.bs = FALSE,
   label.levels = NULL,
   label.probs = NULL,
-  percentiles = c(0.025, 0.975)
+  quantiles = c(0.025, 0.975)
 )
 }
 \arguments{
@@ -35,7 +35,7 @@ to find a null distribution for the label transmission rates}
 
 \item{label.probs}{The overall proportions of labels across the clusters of interest}
 
-\item{percentiles}{Percentiles at which to find quantiles from the null distribution}
+\item{quantiles}{Quantiles at which to find quantiles from the null distribution}
 }
 \value{
 A matrix containing the the probabilities for each individual to be infected by a sampled individual of a certain label

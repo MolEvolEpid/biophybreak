@@ -13,7 +13,7 @@ label.transmissions.wrapper(
   permute_test = TRUE,
   nPermute = 10000,
   between.clust.bs = FALSE,
-  percentiles = c(0.025, 0.975),
+  quantiles = c(0.025, 0.975),
   max.cores = parallel::detectCores()
 )
 }
@@ -36,7 +36,7 @@ to find a null distribution for the label transmission rates}
 
 \item{between.clust.bs}{Whether or not the bootstrapping should include demographic label randomization between clusters as well as within clusters}
 
-\item{percentiles}{Percentiles at which to find quantiles from the null distribution (only affects individual cluster results)}
+\item{quantiles}{Quantiles at which to find quantiles from the null distribution (only affects individual cluster results)}
 
 \item{max.cores}{The maximum number of cores to use for parallel processing}
 }
@@ -47,6 +47,9 @@ A list containing the following elements:
    \item \code{all.label.transmissions.mean} the overall matrix of transmission rates
    \item \code{all.label.transmissions.null.mean} the matrix of the mean transmission rates in the null distribution using only the clustering information
    \item \code{all.label.transmissions.bcbs.mean} the matrix of the mean transmission rates in the null distribution using only the overall demographic label proportions
+   \item \code{all.label.transmissions.quantile} the transmission rates at the provided quantiles
+   \item \code{all.label.transmissions.null.quantile} the quantile values of transmission rates in the null distribution using only the clustering information
+   \item \code{all.label.transmissions.bcbs.quantile} the quantile values of transmission rates in the null distribution using only the overall demographic label proportions
    \item \code{all.label.transmissions.boot} all bootstrapped values for the actual group transmission rates using clustering and transmission history information
    \item \code{all.label.transmissions.null} all bootstrapped values for the null transmission rates using only the within-cluster demographic label information
    \item \code{all.label.transmissions.bcbs} all bootstrapped values for the null transmission rates using only the overall demographic label proportions
@@ -57,9 +60,6 @@ A list containing the following elements:
    \item \code{percentiles_null_bc} the percentile value of \code{all.label.transmissions.null.mean} with respect to \code{all.label.transmissions.bcbs}
    \item \code{pval_uncor_null_bc} Conversion of \code{percentiles_null_bc} to a two-tailed p-value
 }
-
-an array of the null transmission rate samples from the permutation test, 
-the percentiles of each label transmission rate, and the raw p values for
 }
 \description{
 Function to find the expected number of transmission between and within individuals 
