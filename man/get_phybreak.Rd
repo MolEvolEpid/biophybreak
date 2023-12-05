@@ -45,24 +45,24 @@ Extracting from a phybreak object
 }
 \section{Functions}{
 \itemize{
-\item \code{get_data}: The data in class \code{phybreakdata}.
+\item \code{get_data()}: The data in class \code{phybreakdata}.
 
-\item \code{get_parameters}: A named vector with current parameter values.
+\item \code{get_parameters()}: A named vector with current parameter values.
 
-\item \code{get_transtree}: A \code{data.frame} with current infectors and infection times.
+\item \code{get_transtree()}: A \code{data.frame} with current infectors and infection times.
 
-\item \code{get_phylo}: Returns an object of class \code{\link[ape]{phylo}} ans optionally of class
+\item \code{get_phylo()}: Returns an object of class \code{\link[ape]{phylo}} ans optionally of class
 \code{"simmap"} (package \pkg{phytools}).
 
-\item \code{get_multiPhylo}: Returns an object of class \code{\link[ape]{multiphylo}}.
+\item \code{get_multiPhylo()}: Returns an object of class \code{\link[ape]{multiphylo}}.
 
-\item \code{get_mcmc}: An object of class \code{"mcmc"} (package \pkg{coda}), with sampled parameters, 
+\item \code{get_mcmc()}: An object of class \code{"mcmc"} (package \pkg{coda}), with sampled parameters, 
 infection times, and infectors.
 
-\item \code{get_bottlenecks}: A vector with for each host the current number of extant lineages in its phylogenetic minitree
+\item \code{get_bottlenecks()}: A vector with for each host the current number of extant lineages in its phylogenetic minitree
 at the time of infection (the bottleneck size).
-}}
 
+}}
 \examples{
 #First build a phybreak-object.
 simulation <- sim_phybreak(obsize = 5)

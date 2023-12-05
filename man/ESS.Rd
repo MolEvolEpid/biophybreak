@@ -41,13 +41,13 @@ When applied to an object of class \code{phybreak}, \code{ESS} calculates for al
 }
 \section{Methods (by class)}{
 \itemize{
-\item \code{phybreak}: Effective sample size of phybreak posterior.
+\item \code{ESS(phybreak)}: Effective sample size of phybreak posterior.
 
-\item \code{factor}: Effective sample size of a categorical variable.
+\item \code{ESS(factor)}: Effective sample size of a categorical variable.
 
-\item \code{numeric}: Effective sample size of a categorical variable.
+\item \code{ESS(numeric)}: Effective sample size of a categorical variable.
+
 }}
-
 \examples{
 #First create a phybreak object
 simulation <- sim_phybreak(obsize = 5)
