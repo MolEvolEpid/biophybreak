@@ -5,19 +5,20 @@
 \title{Find transmission rates between individuals with certain labels over multiple clusters}
 \usage{
 label.transmissions.wrapper(
-  output = NULL,
+  output,
   filenames = NULL,
   filepath = NULL,
   df,
   labelname,
   permute_test = TRUE,
   nPermute = 10000,
-  percentiles = c(0.025, 0.975),
+  between.clust.bs = FALSE,
+  quantiles = c(0.025, 0.975),
   max.cores = parallel::detectCores()
 )
 }
 \arguments{
-\item{output}{A list output as from run.biophybreak. Does not need to be specified if filenames and filepath are provided.
+\item{output}{A list output as from run.biophybreak. Does not need to include the 'MCMCstate's if filenames and filepath are provided.
 For large datasets, use of filenames and filepath is recommended instead}
 
 \item{filenames}{A vector of file names of output from biophybreak}
@@ -33,14 +34,32 @@ to find a null distribution for the label transmission rates}
 
 \item{nPermute}{Number of permutations to use in the permutation test}
 
-\item{percentiles}{Percentiles at which to find quantiles from the null distribution (only affects individual cluster results)}
+\item{between.clust.bs}{Whether or not the bootstrapping should include demographic label randomization between clusters as well as within clusters}
+
+\item{quantiles}{Quantiles at which to find quantiles from the null distribution (only affects individual cluster results)}
 
 \item{max.cores}{The maximum number of cores to use for parallel processing}
 }
 \value{
-A list containing the individual cluster outputs from label.transmissions, 
-the overall matrix of transmission rates, an array of the null transmission rate samples from the permutation test, 
-the percentiles of each label transmission rate, and the raw p values for
+A list containing the following elements:
+\itemize{
+   \item \code{lt.wrapped} individual cluster outputs from label.transmissions
+   \item \code{all.label.transmissions.mean} the overall matrix of transmission rates
+   \item \code{all.label.transmissions.null.mean} the matrix of the mean transmission rates in the null distribution using only the clustering information
+   \item \code{all.label.transmissions.bcbs.mean} the matrix of the mean transmission rates in the null distribution using only the overall demographic label proportions
+   \item \code{all.label.transmissions.quantile} the transmission rates at the provided quantiles
+   \item \code{all.label.transmissions.null.quantile} the quantile values of transmission rates in the null distribution using only the clustering information
+   \item \code{all.label.transmissions.bcbs.quantile} the quantile values of transmission rates in the null distribution using only the overall demographic label proportions
+   \item \code{all.label.transmissions.boot} all bootstrapped values for the actual group transmission rates using clustering and transmission history information
+   \item \code{all.label.transmissions.null} all bootstrapped values for the null transmission rates using only the within-cluster demographic label information
+   \item \code{all.label.transmissions.bcbs} all bootstrapped values for the null transmission rates using only the overall demographic label proportions
+   \item \code{percentiles} the percentile value of \code{all.label.transmissions.mean} with respect to \code{all.label.transmissions.null}
+   \item \code{pval_uncor} Conversion of \code{percentiles} to a two-tailed p-value
+   \item \code{percentiles_bc} the percentile value of \code{all.label.transmissions.mean} with respect to \code{all.label.transmissions.bcbs}
+   \item \code{pval_uncor_bc} Conversion of \code{percentiles_bc} to a two-tailed p-value
+   \item \code{percentiles_null_bc} the percentile value of \code{all.label.transmissions.null.mean} with respect to \code{all.label.transmissions.bcbs}
+   \item \code{pval_uncor_null_bc} Conversion of \code{percentiles_null_bc} to a two-tailed p-value
+}
 }
 \description{
 Function to find the expected number of transmission between and within individuals 
