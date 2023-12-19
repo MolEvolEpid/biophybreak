@@ -6,10 +6,12 @@
 #'Also determines the left boundary of the rectangle enclosing each cluster. 
 #'For example, if set to 0.01, it uses the first percentile of the predicted infection times for sorting.
 #'@param xmin_override If specified, this overrides the default method of determining the lower bound for plotting.
+#'@param cluster_labels Whether or not to include text labels of each cluster on the plot
 #'@export
 infection.distributions.plot <- function(df, 
                                          sort_quant = 0.01,
-                                         xmin_override = NULL){
+                                         xmin_override = NULL,
+                                         cluster_labels = FALSE){
   #find names of all clusters
   cluster_names <- unique(df$cluster_ID)
   
@@ -106,9 +108,11 @@ infection.distributions.plot <- function(df,
   y_level <- 0
   
   p1 <- p1 + ggplot2::geom_rect(data = extrema.df, ggplot2::aes(xmin = xmins, xmax = xmaxes, ymin = ymins+0.5, ymax = ymaxes-0.5), 
-                                color = "#F2F2F2", fill = "#F2F2F2", size = 0.3) + 
-    ggplot2::annotate("text", x = extrema.df$xmaxes+1, y = (extrema.df$ymins+extrema.df$ymaxes)/2, 
-                      label = cluster_names[cluster_order], size = 0.9)
+                                color = "#F2F2F2", fill = "#F2F2F2", size = 0.3)
+  if(cluster_labels){
+    p1 <- p1 + ggplot2::annotate("text", x = extrema.df$xmaxes+1, y = (extrema.df$ymins+extrema.df$ymaxes)/2, 
+                                 label = cluster_names[cluster_order], size = 0.9)
+  }
   for(i in seq_along(nInds)){
     for(j in seq_len(nInds[cluster_order[i]])){
       #color for line depending on whether distribution is informed or not

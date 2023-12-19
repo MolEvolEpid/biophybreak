@@ -4,7 +4,12 @@
 \alias{infection.distributions.plot}
 \title{Plot densities of predicted infection times}
 \usage{
-infection.distributions.plot(df, sort_quant = 0.01, xmin_override = NULL)
+infection.distributions.plot(
+  df,
+  sort_quant = 0.01,
+  xmin_override = NULL,
+  cluster_labels = FALSE
+)
 }
 \arguments{
 \item{df}{A data frame containing infection time distributions as in the output from prepare.HIV.data 
@@ -15,6 +20,8 @@ Also determines the left boundary of the rectangle enclosing each cluster.
 For example, if set to 0.01, it uses the first percentile of the predicted infection times for sorting.}
 
 \item{xmin_override}{If specified, this overrides the default method of determining the lower bound for plotting.}
+
+\item{cluster_labels}{Whether or not to include text labels of each cluster on the plot}
 }
 \description{
 Function to plot the individual and total densities of predicted infection times on one page (in two panels)
