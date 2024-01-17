@@ -299,7 +299,15 @@ prepare.HIV.data <- function(patient_ID,
     pol <- lapply(length_and_pol, FUN = function(x) x$pol)
   } else{ #override pol values if provided
     pol <- as.list(pol_override)
-    seq_length = as.list(seq_length_override)
+    if(!is.null(seq_length_override)){
+      if(length(seq_length_override) == total_inds){
+        seq_length = as.list(seq_length_override)
+      } else{
+        stop("If provided, seq_length_override must be the same length as the number of individuals")
+      }
+    } else{
+      seq_length <- as.list(rep(NA, total_inds))
+    }
   }
   
   #find number of sequences per individual
