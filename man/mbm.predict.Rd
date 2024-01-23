@@ -5,11 +5,12 @@
 \title{Predict infection times with MBM}
 \usage{
 mbm.predict(
-  BED = rep(NA, 1),
-  LAg = rep(NA, 1),
-  CD4 = rep(NA, 1),
-  pol = rep(NA, 1),
-  pol2 = rep(NA, 1),
+  nInds = 1,
+  BED = rep(NA, nInds),
+  LAg = rep(NA, nInds),
+  CD4 = rep(NA, nInds),
+  pol = rep(NA, nInds),
+  pol2 = rep(NA, nInds),
   prev.neg.time = NULL,
   t.BED.delay = rep(0, length(BED)),
   t.LAg.delay = rep(0, length(LAg)),
@@ -33,6 +34,8 @@ mbm.predict(
 )
 }
 \arguments{
+\item{nInds}{The number of individuals. Defaults to one.}
+
 \item{BED}{A vector of BED values, one for each individual. Can be omitted.}
 
 \item{LAg}{A vector of LAg values, one for each individual. Can be omitted.}

@@ -105,6 +105,7 @@ sim.biomarkers <- function(t.inf,
 #' @title Predict infection times with MBM
 #' @description Function to use the multiple biomarker model for infection time prediction
 #'This version uses the actual CD4 values, not the square root transformed values of previous versions
+#' @param nInds The number of individuals. Defaults to one.
 #' @param BED A vector of BED values, one for each individual. Can be omitted.
 #' @param LAg A vector of LAg values, one for each individual. Can be omitted.
 #' @param CD4 A vector of CD4 values, one for each individual. These are the actual CD4+ T-cell concentrations, not the square-root transformed ones used in previous versions. 
@@ -143,11 +144,12 @@ sim.biomarkers <- function(t.inf,
 #'   If output.raw is TRUE, "raw" is the matrix of MCMC samples of the infection ages for all individuals.
 #' @export
 
-mbm.predict <- function(BED = rep(NA, 1), 
-                        LAg = rep(NA, 1), 
-                        CD4 = rep(NA, 1), 
-                        pol = rep(NA, 1), 
-                        pol2 = rep(NA, 1),
+mbm.predict <- function(nInds = 1,
+                        BED = rep(NA, nInds), 
+                        LAg = rep(NA, nInds), 
+                        CD4 = rep(NA, nInds), 
+                        pol = rep(NA, nInds), 
+                        pol2 = rep(NA, nInds),
                         prev.neg.time = NULL, 
                         t.BED.delay = rep(0, length(BED)),
                         t.LAg.delay = rep(0, length(LAg)),
@@ -184,27 +186,27 @@ mbm.predict <- function(BED = rep(NA, 1),
   
   #put into matrix format for JAGS model if it is not already
   if(!is.matrix(CD4)){
-    cd4.test <- sqrt(matrix(CD4, ncol = 1))
+    cd4.test <- sqrt(matrix(CD4, nrow = nInds))
   } else{
     cd4.test <- sqrt(CD4)
   }
   if(!is.matrix(pol)){
-    pol.test <- matrix(pol, ncol = 1)
+    pol.test <- matrix(pol, nrow = nInds)
   } else{
     pol.test <- pol
   }
   if(!is.matrix(BED)){
-    bed.test <- matrix(BED, ncol = 1)
+    bed.test <- matrix(BED, nrow = nInds)
   } else{
     bed.test <- BED
   }
   if(!is.matrix(LAg)){
-    lag.test <- matrix(LAg, ncol = 1)
+    lag.test <- matrix(LAg, nrow = nInds)
   } else{
     lag.test <- LAg
   }
   if(!is.matrix(pol2)){
-    pol2.test <- matrix(pol2, ncol = 1)
+    pol2.test <- matrix(pol2, nrow = nInds)
   } else{
     pol2.test <- pol2
   }
@@ -234,9 +236,6 @@ mbm.predict <- function(BED = rep(NA, 1),
     t.pol2.delay.test <- t.pol2.delay
   }
   
-  nInds <- dim(bed.test)[1]
-  nSamples <- dim(bed.test)[2]
-  
   #set previous negative times to infinity if they are not provided
   if(is.null(prev.neg.time)){
     prev.neg.time <- rep(Inf, nInds)
@@ -253,18 +252,15 @@ mbm.predict <- function(BED = rep(NA, 1),
   
   #find number of non NA samples per individual (return 1 if only sample is NA)
   mbed <- max(rowSums(!is.na(bed.test)), 1)
+  mbed <- apply(bed.test, 1, FUN = function(x) max(sum(!is.na(x)),1))
   mlag <- max(rowSums(!is.na(lag.test)), 1)
+  mlag <- apply(lag.test, 1, FUN = function(x) max(sum(!is.na(x)),1))
   mcd4 <- max(rowSums(!is.na(cd4.test)), 1)
+  mcd4 <- apply(cd4.test, 1, FUN = function(x) max(sum(!is.na(x)),1))
   mpol <- max(rowSums(!is.na(pol.test)), 1)
+  mpol <- apply(pol.test, 1, FUN = function(x) max(sum(!is.na(x)),1))
   mpol2 <- max(rowSums(!is.na(pol2.test)), 1)
-  mt.bed.delay <- rowSums(!is.na(t.bed.delay.test))
-  mt.lag.delay <- rowSums(!is.na(t.lag.delay.test))
-  mt.cd4.delay <- rowSums(!is.na(t.cd4.delay.test))
-  mt.pol.delay <- rowSums(!is.na(t.pol.delay.test))
-  mt.pol2.delay <- rowSums(!is.na(t.pol2.delay.test))
-  
-  mp <- apply(cbind(mbed, mlag, mcd4, mpol, mpol2, 
-                    mt.bed.delay, mt.lag.delay, mt.cd4.delay, mt.pol.delay, mt.pol2.delay), 1, max)
+  mpol2 <- apply(pol2.test, 1, FUN = function(x) max(sum(!is.na(x)),1))
   
   #check to make sure output request is valid
   #if(!(output == "continuous" | output == "numeric" | output == "both")){
@@ -396,7 +392,7 @@ mbm.predict <- function(BED = rep(NA, 1),
                      prior_shape = trunc.shape, prior_rate = trunc.rate, neg_time = max.uninf.time,
                      sg_cdf = sg_cdf, sg_t_ind = ts, sg_upper = sg_upper, 
                      u1_cdf = u1_cdf, u1_t_ind = u1_t_ind, u1_upper = u1_upper)
-  
+  #return(input_data)
   #prediction model
   mbm_predict <- "
   model{
