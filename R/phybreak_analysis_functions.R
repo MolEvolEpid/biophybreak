@@ -256,7 +256,9 @@ phybreak.plot.posteriors <- function(post_prob_df, treecolors = NULL, unsampled 
       ggplot2::scale_fill_manual(values = c("#888888", treecolors)) +
       ggplot2::scale_color_manual(values = c("#DDDDDD", "#000000")) +
       ggplot2::theme_bw() +
-      ggplot2::theme(axis.text.x = ggtext::element_markdown(color = treecolors, angle = angle))
+      ggplot2::theme(axis.text.x = ggtext::element_markdown(color = treecolors, angle = angle)) +
+      ggplot2::guides(fill = ggplot2::guide_legend(order = 1),
+                      color = ggplot2::guide_legend(order = 2, override.aes = list(fill = "#FFFFFF")))
   } else{
     ggplot2::ggplot(data = post_prob_df, ggplot2::aes(x = Individual, y = Posterior.Support, fill = Infector)) + 
       ggplot2::geom_bar(position = "dodge", stat = "identity", width = 0.8) + 
