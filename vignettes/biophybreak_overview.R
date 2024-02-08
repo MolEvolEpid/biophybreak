@@ -1,54 +1,18 @@
----
-title: "Biophybreak Workflow"
-author: "Erik Lundgren"
-date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{Biophybreak Workflow}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
----
-
-```{r, include = FALSE}
+## ---- include = FALSE---------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   out.width = "100%",
   comment = "#>"
 )
-```
 
-## Overview
-
-**biophybreak** can produce probability distributions for infection times based on HIV biomarkers 
-as well as infer the transmission history of individuals in a transmission cluster.
-
-### Workflow
-
-- use mbm.predict to find infection age distributions of all individuals
-- create a `phybreakdata` object with the sequences and sample times
-- create a `phybreak` object with the data, infection and generation time distributions, and inference settings
-- run the MCMC without sampling for burn-in
-- run the MCMC while sampling for inference
-- run desired analysis and plotting
-
-## load packages and set pRNG seed
-
-```{r packages}
+## ----packages-----------------------------------------------------------------
 library(biophybreak)
 library(ggplot2)
 
 seed <- 4321
 set.seed(seed)
-```
 
-## Using biomarker data to predict infection times
-
-### Create simulated data
-
-We will start by creating some simulated data on which we would like to do inference. 
-You would not perform this step if using real datasets.
-
-```{r simulate_data}
+## ----simulate_data------------------------------------------------------------
 #number of individuals
 nInd <- 5
 
@@ -101,14 +65,8 @@ biomarkers <- sim.biomarkers(t.inf = infection.ages,
                              mub = MBM_pars$mub, #means of MBM parameters
                              Sigmab = MBM_pars$Sigmab, #covariance matrix of MBM parameters
                              sigmae = MBM_pars$sigmae) #standard deviations of gaussian noise for each biomarker
-```
 
-### infer infection time distributions with mbm.predict
-
-We can the use the mbm.predict function to infer the infection age distributions for each individual.
-You will need JAGS installed for the rjags package to work.
-
-```{r}
+## -----------------------------------------------------------------------------
 infection.dists <- mbm.predict(nInds = 5,
                                BED = biomarkers[,1], #values from BED assay (OD-n))
                                LAg = biomarkers[,2], #value from LAg-Avidity assay
@@ -119,22 +77,13 @@ infection.dists <- mbm.predict(nInds = 5,
                                Sigmab = MBM_pars$Sigmab, 
                                sigmae = MBM_pars$sigmae,
                                n.adapt = 10000, n.burn = 50000, n.iter = 100000, output.raw = TRUE)
-```
 
-## create phybreakdata object
-
-Since we are using simulated data, we already created a `phybreakdata` object with sim.coal.phybreak, 
-but with real data, we could create one using the phybreakdata function.
-
-```{r}
+## -----------------------------------------------------------------------------
 data <- phybreakdata(sequences = sim_data$sequences, #sequences
                      sample.times = sim_data$sample.times, #times of samples
                      host.names = sim_data$sample.hosts) #which host each sample was taken from
-```
 
-## create phybreak object
-
-```{r}
+## -----------------------------------------------------------------------------
 #set up phybreak object to run MCMC
 MCMCstate <- phybreak(dataset = data, 
                       wh.model = "linear", #linear effective population size growth
@@ -149,54 +98,32 @@ MCMCstate <- phybreak(dataset = data,
                       est.gen.mean = FALSE, #do not estimate gen mean (because function is provided)
                       use.pml = TRUE, #use the pml function in phangorn for the sequence likelihood with GTR model
                       mut.model = mut.model)
-```
 
-## run burn-in
-
-```{r}
+## -----------------------------------------------------------------------------
 MCMCstate <- burnin_phybreak(MCMCstate, ncycles = 10000)
-```
 
-## MCMC sampling
-
-```{r}
+## -----------------------------------------------------------------------------
 MCMCstate <- sample_phybreak(MCMCstate, nsample = 25000)
-```
 
-## Analysis
-
-### Find effective sample sizes
-```{r effective_size}
+## ----effective_size-----------------------------------------------------------
 ESS <- ESS(MCMCstate)
 barplot(log10(ESS))
 abline(h = log10(200))
-```
 
-### MPC tree
-
-Find and plot the maximum parent credibility tree
-```{r mpc_tree}
+## ----mpc_tree-----------------------------------------------------------------
 plotPhyloTrans(MCMCstate, plot.which = "mpc")
-```
 
-### find posterior probabilities
-
-We can find the posterior probabilities for each infector for each individual (and accuracy if applicable).
-
-```{r}
+## -----------------------------------------------------------------------------
 #since we have simulated data, we can find the accuracy
 accuracy <- phybreak.accuracy(phybreak.true = sim_data, MCMCstate = MCMCstate)
 
 #without the simulated data, we can find the posterior pro
 post.prob <- phybreak.infector.posts(MCMCstate = MCMCstate)
-```
 
-### Plots posterior probabilities
-
-```{r}
+## -----------------------------------------------------------------------------
 #if true history is known
 plot(phybreak.plot.posteriors(accuracy$post_prob_df))
 
 #if true history is unknown
 plot(phybreak.plot.posteriors(post.prob$post_prob_df))
-```
+

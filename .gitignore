@@ -8,4 +8,4 @@ src/*.so
 src/*.dll
 inst/doc
 *.pdf
-
+*.html
