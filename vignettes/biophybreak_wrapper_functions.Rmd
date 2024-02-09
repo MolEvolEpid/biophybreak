@@ -1,0 +1,91 @@
+---
+title: "Biophybreak Wrapper Functions"
+author: "Erik Lundgren"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  out.width = "100%",
+  comment = "#>"
+)
+```
+
+##Introduction
+
+This vignette is intended to provide an explanation of the biophybreak workflow with the wrapper functions when using real data.
+Real data is not actually available for this example, but I will do some transformations to make it more similar in format to real data
+and demonstrate the functions that you would typically use with real data.
+
+## load packages and set pRNG seed
+
+```{r packages}
+library(biophybreak)
+library(parallel)
+
+seed <- 1234
+set.seed(seed)
+```
+
+##Simulate several transmission histories
+
+```{r simulate_transmission_histories}
+#number of individuals in each cluster
+nInds <- c(2, 5, 8)
+
+#number of transmission clusters
+nClust <- length(nInds)
+
+#time betweeen infection and sampling is gamma distributed with mean 2 and sd 1.5
+infection.ages <- lapply(nInds, FUN = rgamma, shape = 16/9, rate = 8/9)
+
+#type of distribution for transmissibility profile
+#(relative chance of transmission based on how long an individual has been infected)
+trans.prof.type <- "function"
+transmissibility.profile <- stepfun(x = c(0, 0.5), y = c(0, 3, 1)) #three times more likely to transmit in first 6 months
+
+#declare list for transmission histories
+tt <- vector(mode = "list", length = nClust)
+#generate transmission histories
+for(i in seq_len(nClust)){
+  tt[[i]] <- rtrans_tree(nInd = nInds[i], 
+                         infection.ages = infection.ages[[i]],
+                         #trans.prof.type = trans.prof.type, 
+                         #transmissibility.profile = transmissibility.profile
+                         gen.dist.type = trans.prof.type, 
+                         gen.dist = transmissibility.profile)
+}
+
+#declare list for simulated data
+sim_data <- vector(mode = "list", length = nClust)
+#simulate phylogenies and sequences
+for(i in seq_along(nInds)){
+  sim_data[[i]] <- sim.coal.phybreak(tt[[i]], 
+                                     a = rep(5, nInds[i]),
+                                     b = rep(5, nInds[i]),
+                                     mut_model = "pol")
+}
+```
+
+##Plot simulated transmission histories
+
+```{r plot_sim_histories}
+plotPhyloTrans(sim_data[[1]])
+plotPhyloTrans(sim_data[[2]])
+plotPhyloTrans(sim_data[[3]])
+```
+
+##Simulate biomarker values
+
+```{r}
+#collapse infection ages into single vector
+infection.ages.vector <- do.call("c", infection.ages)
+#draw random biomarkers based on infection ages
+biomarkers <- sim.biomarkers(infection.ages.vector)
+```

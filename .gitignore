@@ -9,3 +9,4 @@ src/*.dll
 inst/doc
 *.pdf
 *.html
+*.png
