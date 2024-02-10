@@ -89,3 +89,140 @@ infection.ages.vector <- do.call("c", infection.ages)
 #draw random biomarkers based on infection ages
 biomarkers <- sim.biomarkers(infection.ages.vector)
 ```
+
+##Convert simulated data to a format more similar to real data
+
+```{r}
+#put all sampling times (relative to first infection time in each cluster) in a vector
+all_t_sam <- unlist(lapply(tt, FUN = function(tt) tt$t_sam))
+
+#find approximate dates for sampling times assuming the earliest infected individual in the cluster is infected 2000-01-01
+t_sam_dates <- as.Date(all_t_sam*365.25, origin = "2000-01-01")
+
+#add cluster number to patient names
+#paste(1, tt[[1]]$names, sep = "_")
+patient_ID <- unlist(lapply(tt, FUN = function(tt) tt$names))
+
+#vector for the cluster name for each individual
+#repeat the cluster ID a number of times equal to the number of individuals in the cluster
+cluster_ID <- unlist(mapply(seq_along(nInds), FUN = rep, nInds))
+
+#extract simulated sequences from transmission history simulation data
+extract_seqs <- function(sim_data, tt){
+  nInd <- length(tt$t_sam)
+  seqs <- vector(mode = "list", length = nInd)
+  for(i in seq_len(nInd)){
+    seqs[[i]] <- sim_data$sequences[i,,drop = FALSE]
+  }
+  #put back into original order instead of order based on sampling time
+  seqs <- seqs[order(order(tt$t_sam))]
+  return(seqs)
+}
+seqs <- mapply(FUN = extract_seqs, sim_data, tt)
+#change to single list instead of list of lists
+seqs <- do.call("c", seqs)
+
+#sequence names
+seq_names <- lapply(seqs, FUN = names)
+```
+
+##Put data into dataframe
+The \code{prepare.HIV.data} function 
+
+```{r prepare.HIV.data}
+df <- prepare.HIV.data(patient_ID = patient_ID,
+                       last_neg_test_date = NULL,
+                       first_pos_test_date = t_sam_dates, 
+                       ART_start_date = NULL,
+                       BED_dates = t_sam_dates,
+                       BED = biomarkers[,"BED"],
+                       LAg_dates = t_sam_dates,
+                       LAg = biomarkers[,"LAg"],
+                       CD4_dates = t_sam_dates,
+                       CD4 = biomarkers[,"CD4"],
+                       seq_dates = t_sam_dates,
+                       seqs = seqs,
+                       seq_names = seq_names,
+                       pol_override = biomarkers[,"pol"], #you would normally not use this
+                       pol2_dates = t_sam_dates,
+                       pol2 = biomarkers[,"pol2"], 
+                       VL_dates = NULL,
+                       VL = NULL,
+                       ART_cutoff_delay = 3, #in days
+                       cluster_ID = cluster_ID,
+                       gender = NULL,
+                       age_at_sampling = NULL,
+                       birth_location = NULL,
+                       suspected_infection_location = NULL,
+                       risk_group = NULL,
+                       aids_diagnosis_date = NULL,
+                       death_date = NULL,
+                       date_format = "%Y-%m-%d",
+                       find_infection_age_distributions = TRUE,
+                       prior.type = 1,
+                       user.prior.pdf = list(x = c(0, 10), y = c(1/10, 1/10)),
+                       n.adapt = 1e4, 
+                       n.burn = 1e4, 
+                       n.iter = 1e4,
+                       seed = sample(2^31-1, 1))
+```
+
+##Specify additional parameters for inference
+
+```{r}
+inputs <- prepare.biophybreak.data(df, 
+                                   wh.model = "linear",
+                                   wh.bottleneck = "wide",
+                                   prior.wh.level.mean = 0.1,
+                                   gen.type = "function",
+                                   gen.density = stepfun(c(0, 0.5), c(0, 3, 1)),
+                                   post.sam.trans.rate = 1,
+                                   est.gen.mean = FALSE,
+                                   use.pml = TRUE,
+                                   mut.model = "pol",
+                                   run.names = "automatic",
+                                   overall.seed = sample(2^31-1,1))
+```
+
+##Run biophybreak
+
+```{r}
+cl <- parallel::makePSOCKcluster(min(nClust, detectCores()))
+parallel::setDefaultCluster(cl)
+parallel::clusterEvalQ(NULL, library(biophybreak))
+MCMCs <- parLapply(NULL,
+                   inputs, 
+                   fun = run.biophybreak,
+                   burn_iter = 1e4, 
+                   iter_max = 1e5, 
+                   iter_block = 1e4, 
+                   thin = 1, 
+                   ESS_target = 200,
+                   save = FALSE,
+                   outdir = NULL)
+parallel::stopCluster(cl)
+```
+
+##Plot posterior probabilities and consensus trees
+```{r plot_inference}
+#assuming true history is unknown
+for(i in seq_along(MCMCs)){
+  phybreak.plot.triple(MCMCstate = MCMCs[[i]]$MCMCstate, 
+                       title = MCMCs[[i]]$run_name)
+}
+#if true history is known
+for(i in seq_along(MCMCs)){
+  phybreak.plot.triple(MCMCstate = MCMCs[[i]]$MCMCstate, 
+                       phybreak.true = sim_data[[i]],
+                       title = MCMCs[[i]]$run_name)
+}
+```
+
+##Find effective sample sizes
+
+```{r}
+ESSs <- vector(mode = "list", length = length(MCMCs))
+for(i in seq_along(MCMCs)){
+  ESSs[[i]] <- ESS(MCMCs[[i]]$MCMCstate)
+}
+```
