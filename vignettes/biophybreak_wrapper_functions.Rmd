@@ -127,7 +127,11 @@ seq_names <- lapply(seqs, FUN = names)
 ```
 
 ##Put data into dataframe
-The \code{prepare.HIV.data} function 
+The \code{prepare.HIV.data} function combines all of the biomarker, sequence, and demographic data 
+needed for later inference into a data frame.
+Here we also use \code{find_infection_age_distributions = TRUE} in order to run the multiple biomarker model
+and calculate the distributions for the amount of time between infection and sampling.
+It is also possible to define your own columns in the data frame by passing new parameters to the funtion.
 
 ```{r prepare.HIV.data}
 df <- prepare.HIV.data(patient_ID = patient_ID,
@@ -168,18 +172,19 @@ df <- prepare.HIV.data(patient_ID = patient_ID,
 ```
 
 ##Specify additional parameters for inference
+Some additional parameters must be specified in order to run biophybreak.
 
 ```{r}
 inputs <- prepare.biophybreak.data(df, 
-                                   wh.model = "linear",
-                                   wh.bottleneck = "wide",
-                                   prior.wh.level.mean = 0.1,
-                                   gen.type = "function",
-                                   gen.density = stepfun(c(0, 0.5), c(0, 3, 1)),
-                                   post.sam.trans.rate = 1,
-                                   est.gen.mean = FALSE,
-                                   use.pml = TRUE,
-                                   mut.model = "pol",
+                                   wh.model = "linear", #type of function for growth of within-host effective pop size
+                                   wh.bottleneck = "wide", #bottleneck size of transmission
+                                   prior.wh.level.mean = 0.1, #prior for 
+                                   gen.type = "function", #type of prior for transmissibility profile
+                                   gen.density = stepfun(c(0, 0.5), c(0, 3, 1)), #transmissibility profile
+                                   post.sam.trans.rate = 1, #factor indicating how much less likely transmission is after sampling
+                                   est.gen.mean = FALSE, 
+                                   use.pml = TRUE, #whether to use the phangorn::pml function for sequence likelihood 
+                                   mut.model = "pol", #the mutation model to use with phangorn::pml
                                    run.names = "automatic",
                                    overall.seed = sample(2^31-1,1))
 ```
@@ -187,9 +192,9 @@ inputs <- prepare.biophybreak.data(df,
 ##Run biophybreak
 
 ```{r}
-cl <- parallel::makePSOCKcluster(min(nClust, detectCores()))
-parallel::setDefaultCluster(cl)
-parallel::clusterEvalQ(NULL, library(biophybreak))
+cl <- makePSOCKcluster(min(nClust, detectCores()))
+setDefaultCluster(cl)
+clusterEvalQ(NULL, library(biophybreak))
 MCMCs <- parLapply(NULL,
                    inputs, 
                    fun = run.biophybreak,
@@ -200,7 +205,7 @@ MCMCs <- parLapply(NULL,
                    ESS_target = 200,
                    save = FALSE,
                    outdir = NULL)
-parallel::stopCluster(cl)
+stopCluster(cl)
 ```
 
 ##Plot posterior probabilities and consensus trees
