@@ -1,10 +1,10 @@
 ---
-title: "Biophybreak Wrapper Functions"
+title: "Biophybreak Wrapper Function Usage"
 author: "Erik Lundgren"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteIndexEntry{Biophybreak Wrapper Function Usage}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -17,7 +17,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-##Introduction
+## Introduction
 
 This vignette is intended to provide an explanation of the biophybreak workflow with the wrapper functions when using real data.
 Real data is not actually available for this example, but I will do some transformations to make it more similar in format to real data
@@ -33,7 +33,7 @@ seed <- 1234
 set.seed(seed)
 ```
 
-##Simulate several transmission histories
+## Simulate several transmission histories
 
 ```{r simulate_transmission_histories}
 #number of individuals in each cluster
@@ -73,7 +73,7 @@ for(i in seq_along(nInds)){
 }
 ```
 
-##Plot simulated transmission histories
+## Plot simulated transmission histories
 
 ```{r plot_sim_histories}
 plotPhyloTrans(sim_data[[1]])
@@ -90,7 +90,7 @@ infection.ages.vector <- do.call("c", infection.ages)
 biomarkers <- sim.biomarkers(infection.ages.vector)
 ```
 
-##Convert simulated data to a format more similar to real data
+## Convert simulated data to a format more similar to real data
 
 ```{r}
 #put all sampling times (relative to first infection time in each cluster) in a vector
@@ -126,12 +126,13 @@ seqs <- do.call("c", seqs)
 seq_names <- lapply(seqs, FUN = names)
 ```
 
-##Put data into dataframe
+## Put data into dataframe
+
 The \code{prepare.HIV.data} function combines all of the biomarker, sequence, and demographic data 
 needed for later inference into a data frame.
 Here we also use \code{find_infection_age_distributions = TRUE} in order to run the multiple biomarker model
 and calculate the distributions for the amount of time between infection and sampling.
-It is also possible to define your own columns in the data frame by passing new parameters to the funtion.
+It is also possible to define your own columns in the data frame by passing new parameters to the function.
 
 ```{r prepare.HIV.data}
 df <- prepare.HIV.data(patient_ID = patient_ID,
@@ -171,25 +172,35 @@ df <- prepare.HIV.data(patient_ID = patient_ID,
                        seed = sample(2^31-1, 1))
 ```
 
-##Specify additional parameters for inference
-Some additional parameters must be specified in order to run biophybreak.
+## Specify additional parameters for inference
+Some additional parameters must be specified in order to run biophybreak, 
+such as the within-host model of effective population size growth, 
+transmissibility profile (how the likelihood of transmitting to a new individual changes over time since infection),
+and the mutation modelused for sequence likelihood.
 
 ```{r}
 inputs <- prepare.biophybreak.data(df, 
                                    wh.model = "linear", #type of function for growth of within-host effective pop size
                                    wh.bottleneck = "wide", #bottleneck size of transmission
-                                   prior.wh.level.mean = 0.1, #prior for 
+                                   prior.wh.level.mean = 0.1, #prior for bottleneck size
                                    gen.type = "function", #type of prior for transmissibility profile
                                    gen.density = stepfun(c(0, 0.5), c(0, 3, 1)), #transmissibility profile
                                    post.sam.trans.rate = 1, #factor indicating how much less likely transmission is after sampling
-                                   est.gen.mean = FALSE, 
+                                   est.gen.mean = FALSE, #set to false if not using a gamma distribution for gen.type
                                    use.pml = TRUE, #whether to use the phangorn::pml function for sequence likelihood 
                                    mut.model = "pol", #the mutation model to use with phangorn::pml
                                    run.names = "automatic",
-                                   overall.seed = sample(2^31-1,1))
+                                   overall.seed = sample(2^31-1,1)) #pRNG seed
 ```
 
-##Run biophybreak
+## Run biophybreak
+
+The run.biophybreak function is a wrapper for 
+the \code{phybreak}, \code{burnin_phybreak}, and \code{sample_phybreak} functions. 
+If you need to run transmission history inference on multiple  transmission clusters, 
+you will most likely want to parallelize the computation with mclapply or parLapply.
+This will take MCMC samples until either the desired effective sample size for all parameters
+or the maximum number of iterations is reached.
 
 ```{r}
 cl <- makePSOCKcluster(min(nClust, detectCores()))
@@ -198,9 +209,9 @@ clusterEvalQ(NULL, library(biophybreak))
 MCMCs <- parLapply(NULL,
                    inputs, 
                    fun = run.biophybreak,
-                   burn_iter = 1e4, 
-                   iter_max = 1e5, 
-                   iter_block = 1e4, 
+                   burn_iter = 1e2, 
+                   iter_max = 1e2, 
+                   iter_block = 1e2, 
                    thin = 1, 
                    ESS_target = 200,
                    save = FALSE,
@@ -208,8 +219,16 @@ MCMCs <- parLapply(NULL,
 stopCluster(cl)
 ```
 
-##Plot posterior probabilities and consensus trees
-```{r plot_inference}
+## Plot posterior probabilities and consensus trees
+
+The \code{phybreak.plot.triple} function is a good way to get an overview of the inference results for each cluster.
+It plots the maximum parent credibility transmission history, 
+the inferred infection times from the multiple biomarker model, 
+and the posterior probabilities of the potential sources for each individual.
+If the true history is known, such as when doing a simulation study, 
+the true history can also be plotted, and the posterior probability plot shows the true source with a darker outline.
+
+```{r plot_inference, fig.width = 7.5, fig.height= 10}
 #assuming true history is unknown
 for(i in seq_along(MCMCs)){
   phybreak.plot.triple(MCMCstate = MCMCs[[i]]$MCMCstate, 
@@ -223,7 +242,10 @@ for(i in seq_along(MCMCs)){
 }
 ```
 
-##Find effective sample sizes
+## Find effective sample sizes
+
+Since \code{run.biophybreak} automatically computes and keeps track of effective sample sizes, 
+they can be plotted in the following way.
 
 ```{r}
 ESSs <- vector(mode = "list", length = length(MCMCs))
