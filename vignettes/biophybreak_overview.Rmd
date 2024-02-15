@@ -48,7 +48,7 @@ set.seed(seed)
 We will start by creating some simulated data on which we would like to do inference. 
 You would not perform this step if using real datasets.
 
-```{r simulate_data}
+```{r simulate_data, fig.width = 6, fig.height=4}
 #number of individuals
 nInd <- 5
 
@@ -166,16 +166,17 @@ MCMCstate <- sample_phybreak(MCMCstate, nsample = 25000)
 ## Analysis
 
 ### Find effective sample sizes
-```{r effective_size}
+```{r effective_size, fig.width = 6, fig.height=4}
 ESS <- ESS(MCMCstate)
-barplot(log10(ESS))
+par(mar = c(5.5, 4, 1, 1))
+barplot(log10(ESS), las = 2)
 abline(h = log10(200))
 ```
 
 ### MPC tree
 
 Find and plot the maximum parent credibility tree
-```{r mpc_tree}
+```{r mpc_tree, fig.width = 6, fig.height=4}
 plotPhyloTrans(MCMCstate, plot.which = "mpc")
 ```
 
@@ -193,7 +194,7 @@ post.prob <- phybreak.infector.posts(MCMCstate = MCMCstate)
 
 ### Plots posterior probabilities
 
-```{r}
+```{r, fig.width = 6, fig.height=4}
 #if true history is known
 plot(phybreak.plot.posteriors(accuracy$post_prob_df))
 
