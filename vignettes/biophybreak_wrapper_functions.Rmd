@@ -75,13 +75,13 @@ for(i in seq_along(nInds)){
 
 ## Plot simulated transmission histories
 
-```{r plot_sim_histories}
+```{r plot_sim_histories, fig.width=6, fig.height=4}
 plotPhyloTrans(sim_data[[1]])
 plotPhyloTrans(sim_data[[2]])
 plotPhyloTrans(sim_data[[3]])
 ```
 
-##Simulate biomarker values
+## Simulate biomarker values
 
 ```{r}
 #collapse infection ages into single vector
@@ -128,9 +128,9 @@ seq_names <- lapply(seqs, FUN = names)
 
 ## Put data into dataframe
 
-The \code{prepare.HIV.data} function combines all of the biomarker, sequence, and demographic data 
+The `prepare.HIV.data` function combines all of the biomarker, sequence, and demographic data 
 needed for later inference into a data frame.
-Here we also use \code{find_infection_age_distributions = TRUE} in order to run the multiple biomarker model
+Here we also use `find_infection_age_distributions = TRUE` in order to run the multiple biomarker model
 and calculate the distributions for the amount of time between infection and sampling.
 It is also possible to define your own columns in the data frame by passing new parameters to the function.
 
@@ -196,7 +196,7 @@ inputs <- prepare.biophybreak.data(df,
 ## Run biophybreak
 
 The run.biophybreak function is a wrapper for 
-the \code{phybreak}, \code{burnin_phybreak}, and \code{sample_phybreak} functions. 
+the `phybreak`, `burnin_phybreak`, and `sample_phybreak` functions. 
 If you need to run transmission history inference on multiple  transmission clusters, 
 you will most likely want to parallelize the computation with mclapply or parLapply.
 This will take MCMC samples until either the desired effective sample size for all parameters
@@ -209,9 +209,9 @@ clusterEvalQ(NULL, library(biophybreak))
 MCMCs <- parLapply(NULL,
                    inputs, 
                    fun = run.biophybreak,
-                   burn_iter = 1e2, 
-                   iter_max = 1e2, 
-                   iter_block = 1e2, 
+                   burn_iter = 1e4, 
+                   iter_max = 2e5, 
+                   iter_block = 1e4, 
                    thin = 1, 
                    ESS_target = 200,
                    save = FALSE,
@@ -221,7 +221,7 @@ stopCluster(cl)
 
 ## Plot posterior probabilities and consensus trees
 
-The \code{phybreak.plot.triple} function is a good way to get an overview of the inference results for each cluster.
+The `phybreak.plot.triple` function is a good way to get an overview of the inference results for each cluster.
 It plots the maximum parent credibility transmission history, 
 the inferred infection times from the multiple biomarker model, 
 and the posterior probabilities of the potential sources for each individual.
@@ -244,12 +244,13 @@ for(i in seq_along(MCMCs)){
 
 ## Find effective sample sizes
 
-Since \code{run.biophybreak} automatically computes and keeps track of effective sample sizes, 
+Since `run.biophybreak` automatically computes and keeps track of effective sample sizes, 
 they can be plotted in the following way.
 
-```{r}
-ESSs <- vector(mode = "list", length = length(MCMCs))
+```{r, fig.width=6, fig.height=4}
+par(mar = c(5.5, 4, 1, 1))
 for(i in seq_along(MCMCs)){
-  ESSs[[i]] <- ESS(MCMCs[[i]]$MCMCstate)
+  barplot(log10(MCMCs[[i]]$ESS[[length(MCMCs[[i]]$ESS)]]+1), las = 2)
+  abline(h = log10(201))
 }
 ```
