@@ -1,0 +1,256 @@
+---
+title: "Biophybreak Wrapper Function Usage"
+author: "Erik Lundgren"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Biophybreak Wrapper Function Usage}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  out.width = "100%",
+  comment = "#>"
+)
+```
+
+## Introduction
+
+This vignette is intended to provide an explanation of the biophybreak workflow with the wrapper functions when using real data.
+Real data is not actually available for this example, but I will do some transformations to make it more similar in format to real data
+and demonstrate the functions that you would typically use with real data.
+
+## load packages and set pRNG seed
+
+```{r packages}
+library(biophybreak)
+library(parallel)
+
+seed <- 1234
+set.seed(seed)
+```
+
+## Simulate several transmission histories
+
+```{r simulate_transmission_histories}
+#number of individuals in each cluster
+nInds <- c(2, 5, 8)
+
+#number of transmission clusters
+nClust <- length(nInds)
+
+#time betweeen infection and sampling is gamma distributed with mean 2 and sd 1.5
+infection.ages <- lapply(nInds, FUN = rgamma, shape = 16/9, rate = 8/9)
+
+#type of distribution for transmissibility profile
+#(relative chance of transmission based on how long an individual has been infected)
+trans.prof.type <- "function"
+transmissibility.profile <- stepfun(x = c(0, 0.5), y = c(0, 3, 1)) #three times more likely to transmit in first 6 months
+
+#declare list for transmission histories
+tt <- vector(mode = "list", length = nClust)
+#generate transmission histories
+for(i in seq_len(nClust)){
+  tt[[i]] <- rtrans_tree(nInd = nInds[i], 
+                         infection.ages = infection.ages[[i]],
+                         #trans.prof.type = trans.prof.type, 
+                         #transmissibility.profile = transmissibility.profile
+                         gen.dist.type = trans.prof.type, 
+                         gen.dist = transmissibility.profile)
+}
+
+#declare list for simulated data
+sim_data <- vector(mode = "list", length = nClust)
+#simulate phylogenies and sequences
+for(i in seq_along(nInds)){
+  sim_data[[i]] <- sim.coal.phybreak(tt[[i]], 
+                                     a = rep(5, nInds[i]),
+                                     b = rep(5, nInds[i]),
+                                     mut_model = "pol")
+}
+```
+
+## Plot simulated transmission histories
+
+```{r plot_sim_histories, fig.width=6, fig.height=4}
+plotPhyloTrans(sim_data[[1]])
+plotPhyloTrans(sim_data[[2]])
+plotPhyloTrans(sim_data[[3]])
+```
+
+## Simulate biomarker values
+
+```{r}
+#collapse infection ages into single vector
+infection.ages.vector <- do.call("c", infection.ages)
+#draw random biomarkers based on infection ages
+biomarkers <- sim.biomarkers(infection.ages.vector)
+```
+
+## Convert simulated data to a format more similar to real data
+
+```{r}
+#put all sampling times (relative to first infection time in each cluster) in a vector
+all_t_sam <- unlist(lapply(tt, FUN = function(tt) tt$t_sam))
+
+#find approximate dates for sampling times assuming the earliest infected individual in the cluster is infected 2000-01-01
+t_sam_dates <- as.Date(all_t_sam*365.25, origin = "2000-01-01")
+
+#add cluster number to patient names
+#paste(1, tt[[1]]$names, sep = "_")
+patient_ID <- unlist(lapply(tt, FUN = function(tt) tt$names))
+
+#vector for the cluster name for each individual
+#repeat the cluster ID a number of times equal to the number of individuals in the cluster
+cluster_ID <- unlist(mapply(seq_along(nInds), FUN = rep, nInds))
+
+#extract simulated sequences from transmission history simulation data
+extract_seqs <- function(sim_data, tt){
+  nInd <- length(tt$t_sam)
+  seqs <- vector(mode = "list", length = nInd)
+  for(i in seq_len(nInd)){
+    seqs[[i]] <- sim_data$sequences[i,,drop = FALSE]
+  }
+  #put back into original order instead of order based on sampling time
+  seqs <- seqs[order(order(tt$t_sam))]
+  return(seqs)
+}
+seqs <- mapply(FUN = extract_seqs, sim_data, tt)
+#change to single list instead of list of lists
+seqs <- do.call("c", seqs)
+
+#sequence names
+seq_names <- lapply(seqs, FUN = names)
+```
+
+## Put data into dataframe
+
+The `prepare.HIV.data` function combines all of the biomarker, sequence, and demographic data 
+needed for later inference into a data frame.
+Here we also use `find_infection_age_distributions = TRUE` in order to run the multiple biomarker model
+and calculate the distributions for the amount of time between infection and sampling.
+It is also possible to define your own columns in the data frame by passing new parameters to the function.
+
+```{r prepare.HIV.data}
+df <- prepare.HIV.data(patient_ID = patient_ID,
+                       last_neg_test_date = NULL,
+                       first_pos_test_date = t_sam_dates, 
+                       ART_start_date = NULL,
+                       BED_dates = t_sam_dates,
+                       BED = biomarkers[,"BED"],
+                       LAg_dates = t_sam_dates,
+                       LAg = biomarkers[,"LAg"],
+                       CD4_dates = t_sam_dates,
+                       CD4 = biomarkers[,"CD4"],
+                       seq_dates = t_sam_dates,
+                       seqs = seqs,
+                       seq_names = seq_names,
+                       pol_override = biomarkers[,"pol"], #you would normally not use this
+                       pol2_dates = t_sam_dates,
+                       pol2 = biomarkers[,"pol2"], 
+                       VL_dates = NULL,
+                       VL = NULL,
+                       ART_cutoff_delay = 3, #in days
+                       cluster_ID = cluster_ID,
+                       gender = NULL,
+                       age_at_sampling = NULL,
+                       birth_location = NULL,
+                       suspected_infection_location = NULL,
+                       risk_group = NULL,
+                       aids_diagnosis_date = NULL,
+                       death_date = NULL,
+                       date_format = "%Y-%m-%d",
+                       find_infection_age_distributions = TRUE,
+                       prior.type = 1,
+                       user.prior.pdf = list(x = c(0, 10), y = c(1/10, 1/10)),
+                       n.adapt = 1e4, 
+                       n.burn = 1e4, 
+                       n.iter = 1e4,
+                       seed = sample(2^31-1, 1))
+```
+
+## Specify additional parameters for inference
+Some additional parameters must be specified in order to run biophybreak, 
+such as the within-host model of effective population size growth, 
+transmissibility profile (how the likelihood of transmitting to a new individual changes over time since infection),
+and the mutation modelused for sequence likelihood.
+
+```{r}
+inputs <- prepare.biophybreak.data(df, 
+                                   wh.model = "linear", #type of function for growth of within-host effective pop size
+                                   wh.bottleneck = "wide", #bottleneck size of transmission
+                                   prior.wh.level.mean = 0.1, #prior for bottleneck size
+                                   gen.type = "function", #type of prior for transmissibility profile
+                                   gen.density = stepfun(c(0, 0.5), c(0, 3, 1)), #transmissibility profile
+                                   post.sam.trans.rate = 1, #factor indicating how much less likely transmission is after sampling
+                                   est.gen.mean = FALSE, #set to false if not using a gamma distribution for gen.type
+                                   use.pml = TRUE, #whether to use the phangorn::pml function for sequence likelihood 
+                                   mut.model = "pol", #the mutation model to use with phangorn::pml
+                                   run.names = "automatic",
+                                   overall.seed = sample(2^31-1,1)) #pRNG seed
+```
+
+## Run biophybreak
+
+The run.biophybreak function is a wrapper for 
+the `phybreak`, `burnin_phybreak`, and `sample_phybreak` functions. 
+If you need to run transmission history inference on multiple  transmission clusters, 
+you will most likely want to parallelize the computation with mclapply or parLapply.
+This will take MCMC samples until either the desired effective sample size for all parameters
+or the maximum number of iterations is reached.
+
+```{r}
+cl <- makePSOCKcluster(min(nClust, detectCores()))
+setDefaultCluster(cl)
+clusterEvalQ(NULL, library(biophybreak))
+MCMCs <- parLapply(NULL,
+                   inputs, 
+                   fun = run.biophybreak,
+                   burn_iter = 1e4, 
+                   iter_max = 2e5, 
+                   iter_block = 1e4, 
+                   thin = 1, 
+                   ESS_target = 200,
+                   save = FALSE,
+                   outdir = NULL)
+stopCluster(cl)
+```
+
+## Plot posterior probabilities and consensus trees
+
+The `phybreak.plot.triple` function is a good way to get an overview of the inference results for each cluster.
+It plots the maximum parent credibility transmission history, 
+the inferred infection times from the multiple biomarker model, 
+and the posterior probabilities of the potential sources for each individual.
+If the true history is known, such as when doing a simulation study, 
+the true history can also be plotted, and the posterior probability plot shows the true source with a darker outline.
+
+```{r plot_inference, fig.width = 7.5, fig.height= 10}
+#assuming true history is unknown
+for(i in seq_along(MCMCs)){
+  phybreak.plot.triple(MCMCstate = MCMCs[[i]]$MCMCstate, 
+                       title = MCMCs[[i]]$run_name)
+}
+#if true history is known
+for(i in seq_along(MCMCs)){
+  phybreak.plot.triple(MCMCstate = MCMCs[[i]]$MCMCstate, 
+                       phybreak.true = sim_data[[i]],
+                       title = MCMCs[[i]]$run_name)
+}
+```
+
+## Find effective sample sizes
+
+Since `run.biophybreak` automatically computes and keeps track of effective sample sizes, 
+they can be plotted in the following way.
+
+```{r, fig.width=6, fig.height=4}
+par(mar = c(5.5, 4, 1, 1))
+for(i in seq_along(MCMCs)){
+  barplot(log10(MCMCs[[i]]$ESS[[length(MCMCs[[i]]$ESS)]]+1), las = 2)
+  abline(h = log10(201))
+}
+```

@@ -1,14 +1,20 @@
 ---
 title: "Biophybreak Workflow"
 author: "Erik Lundgren"
-date: "November 19, 2021"
-output:
-  pdf_document: default
-  html_document: default
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Biophybreak Workflow}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  out.width = "100%",
+  comment = "#>"
+)
 ```
 
 ## Overview
@@ -42,7 +48,7 @@ set.seed(seed)
 We will start by creating some simulated data on which we would like to do inference. 
 You would not perform this step if using real datasets.
 
-```{r simulate_data}
+```{r simulate_data, fig.width = 6, fig.height=4}
 #number of individuals
 nInd <- 5
 
@@ -103,15 +109,16 @@ We can the use the mbm.predict function to infer the infection age distributions
 You will need JAGS installed for the rjags package to work.
 
 ```{r}
-infection.dists <- mbm.predict(BED = biomarkers[,1], #values from BED assay (OD-n))
-            LAg = biomarkers[,2], #value from LAg-Avidity assay
-            CD4 = biomarkers[,3], #CD$+ T cell count
-            pol = biomarkers[,4], #fraction of polymorphic sites in pol gene
-            pol2 = biomarkers[,5], #NGS diversity in pol gene
-            mub = MBM_pars$mub, 
-            Sigmab = MBM_pars$Sigmab, 
-            sigmae = MBM_pars$sigmae,
-            n.adapt = 10000, n.burn = 50000, n.iter = 100000, output.raw = TRUE)
+infection.dists <- mbm.predict(nInds = 5,
+                               BED = biomarkers[,1], #values from BED assay (OD-n))
+                               LAg = biomarkers[,2], #value from LAg-Avidity assay
+                               CD4 = biomarkers[,3], #CD$+ T cell count
+                               pol = biomarkers[,4], #fraction of polymorphic sites in pol gene
+                               pol2 = biomarkers[,5], #NGS diversity in pol gene
+                               mub = MBM_pars$mub, 
+                               Sigmab = MBM_pars$Sigmab, 
+                               sigmae = MBM_pars$sigmae,
+                               n.adapt = 10000, n.burn = 50000, n.iter = 100000, output.raw = TRUE)
 ```
 
 ## create phybreakdata object
@@ -159,16 +166,17 @@ MCMCstate <- sample_phybreak(MCMCstate, nsample = 25000)
 ## Analysis
 
 ### Find effective sample sizes
-```{r effective_size}
+```{r effective_size, fig.width = 6, fig.height=4}
 ESS <- ESS(MCMCstate)
-barplot(log10(ESS))
+par(mar = c(5.5, 4, 1, 1))
+barplot(log10(ESS), las = 2)
 abline(h = log10(200))
 ```
 
 ### MPC tree
 
 Find and plot the maximum parent credibility tree
-```{r mpc_tree}
+```{r mpc_tree, fig.width = 6, fig.height=4}
 plotPhyloTrans(MCMCstate, plot.which = "mpc")
 ```
 
@@ -186,7 +194,7 @@ post.prob <- phybreak.infector.posts(MCMCstate = MCMCstate)
 
 ### Plots posterior probabilities
 
-```{r}
+```{r, fig.width = 6, fig.height=4}
 #if true history is known
 plot(phybreak.plot.posteriors(accuracy$post_prob_df))
 

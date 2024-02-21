@@ -7,3 +7,8 @@ src/*.o
 src/*.so
 src/*.dll
 inst/doc
+*.pdf
+*.html
+*.png
+/doc/
+/Meta/
