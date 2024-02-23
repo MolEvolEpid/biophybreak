@@ -917,7 +917,9 @@ continue.biophybreak <- function(output,
                                  thin = 1,
                                  ESS_target = 200, 
                                  save = TRUE,
-                                 outdir = "."){
+                                 outdir = ".",
+                                 seed = sample(2^31-1, 1)){
+  set.seed(seed)
   #check output from previous run
   if(!("phybreak" %in% class(output$MCMCstate))) stop("'MCMCstate' must be a phybreak object present in output to resume")
   MCMCstate <- output$MCMCstate
@@ -926,7 +928,6 @@ continue.biophybreak <- function(output,
   if(!is.list(output$ESS)) stop("'ESS' must be a list present in output")
   ESS <- output$ESS
   if(!("mixed" %in% names(output))) stop("'mixed' must be present in output")
-  mixed <- output$mixed
   if(!("run_name" %in% names(output))) stop("'run_name' must be present in output")
   run_name <- output$run_name
   if(!("time" %in% names(output))) stop("'time' must be present in output")
@@ -934,8 +935,17 @@ continue.biophybreak <- function(output,
   
   #find current number of blocks
   i <- length(ESS)
-  while(((i*iter_block) < iter_max) & mixed == FALSE){
-    iters <- min(iter_max-i*iter_block, iter_block)
+  #find current number of samples
+  curr_iter <- length(output$MCMCstate$s$logLik)
+  #test whether effective sample size is sufficient with new target
+  mixed_params <- (ESS[[i]] >= ESS_target)
+  if(all(mixed_params[!is.na(mixed_params)])){ #are all non-NA ESSs over the target value?
+    mixed = TRUE
+  } else{
+    mixed = FALSE
+  }
+  while((curr_iter < iter_max) & mixed == FALSE){
+    iters <- min(iter_max-curr_iter, iter_block)
     #tempseed <- .Random.seed #store RNG state for failsafe
     j <- 0
     repeat{
@@ -949,6 +959,7 @@ continue.biophybreak <- function(output,
       if(j == 100) stop(MCMCstate)
     }
     i <- i+1
+    curr_iter <- curr_iter + iters
     ESS[[i]] <- biophybreak::ESS(MCMCstate)
     mixed_params <- (ESS[[i]] >= ESS_target)
     if(all(mixed_params[!is.na(mixed_params)])){ #are all non-NA ESSs over the target value?
