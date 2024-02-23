@@ -898,3 +898,83 @@ run.biophybreak <- function(inputs,
   } 
   return(output)
 }
+
+#'@title Continue sampling with biophybreak
+#'@description Wrapper function to facilitate continue previous inference with biophybreak
+#'@param output The output from run.biophybreak that you wish to run longer
+#'@param iter_max The maximum number of sampling iterations (including those already taken)
+#'@param iter_block How frequently to check for sufficient effective sample size
+#'@param thin Amount of thinning for MCMC samples
+#'@param ESS_target Target effective sample size for all sampled parameters. Sampling will stop if this target is reached.
+#'@param save Whether the MCMC output should be saved to a file
+#'@param outdir The location at which the MCMC output should be saved
+#'@return A list containing the MCMC output, the input list, the effective sample sizes over time, 
+#'the mixing status, the run name, and the computation time
+#'@export
+continue.biophybreak <- function(output, 
+                                 iter_max = 100000,
+                                 iter_block = 10000,
+                                 thin = 1,
+                                 ESS_target = 200, 
+                                 save = TRUE,
+                                 outdir = "."){
+  #check output from previous run
+  if(!("phybreak" %in% class(output$MCMCstate))) stop("'MCMCstate' must be a phybreak object present in output to resume")
+  MCMCstate <- output$MCMCstate
+  if(!("inputs" %in% names(output))) stop("'inputs' must be present in output")
+  inputs <- output$inputs
+  if(!is.list(output$ESS)) stop("'ESS' must be a list present in output")
+  ESS <- output$ESS
+  if(!("mixed" %in% names(output))) stop("'mixed' must be present in output")
+  mixed <- output$mixed
+  if(!("run_name" %in% names(output))) stop("'run_name' must be present in output")
+  run_name <- output$run_name
+  if(!("time" %in% names(output))) stop("'time' must be present in output")
+  time <- output$time
+  
+  #find current number of blocks
+  i <- length(ESS)
+  while(((i*iter_block) < iter_max) & mixed == FALSE){
+    iters <- min(iter_max-i*iter_block, iter_block)
+    #tempseed <- .Random.seed #store RNG state for failsafe
+    j <- 0
+    repeat{
+      j <- j + 1
+      #restore RNG state
+      #.Random.seed <- tempseed
+      time <- time + system.time(MCMCstate_temp <- tryCatch(sample_phybreak(MCMCstate, nsample = iters, thin = thin), 
+                                                            error = function(e) e))
+      #break if successful
+      if(class(MCMCstate_temp)[1] == "phybreak") MCMCstate <- MCMCstate_temp; break
+      if(j == 100) stop(MCMCstate)
+    }
+    i <- i+1
+    ESS[[i]] <- biophybreak::ESS(MCMCstate)
+    mixed_params <- (ESS[[i]] >= ESS_target)
+    if(all(mixed_params[!is.na(mixed_params)])){ #are all non-NA ESSs over the target value?
+      mixed = TRUE
+    }
+    output <- list(MCMCstate = MCMCstate, 
+                   inputs = inputs, 
+                   ESS = ESS,
+                   mixed = mixed,
+                   run_name = inputs$run_name,
+                   time = time)
+    if(save) save(output, file = paste0(outdir, "/partial_", inputs$run_name, ".Rdata"))
+  }
+  output <- list(MCMCstate = MCMCstate, 
+                 inputs = inputs, 
+                 ESS = ESS,
+                 mixed = mixed,
+                 run_name = inputs$run_name,
+                 time = time)
+  if(save){
+    #save final file
+    save(output, file = paste0(outdir, "/", inputs$run_name, ".Rdata"))
+    #remove partial run file
+    if(file.exists(paste0(outdir, "/partial_", inputs$run_name, ".Rdata"))){
+      file.remove(paste0(outdir, "/partial_", inputs$run_name, ".Rdata"))
+    }
+  }
+  return(output)
+}
