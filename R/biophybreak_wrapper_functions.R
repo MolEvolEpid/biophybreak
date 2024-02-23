@@ -530,34 +530,61 @@ run.mbm <- function(df, n.adapt = 1000, n.burn = 1000, n.iter = 1000,
   t_pol2_mats <- mapply(FUN = biomarker_mat, values = pol2_delays, m = mpol2, SIMPLIFY = FALSE)
   pol2_mats <- mapply(FUN = biomarker_mat, values = df$pol2_qc, m = mpol2, SIMPLIFY = FALSE)
   
-  #load trained MBM parameters
-  data("MBM_pars")
+  #setup for parallel processing
+  cl <- parallel::makePSOCKcluster(parallel::detectCores())
+  parallel::setDefaultCluster(cl)
+  parallel::clusterEvalQ(NULL, library(infectionAgeHIV))
+  #apply mbm to each individual
+  infection_age_dists <- parallel::clusterMap(NULL, 
+                                              fun = mbm.predict,
+                                              BED = BED_mats, 
+                                              LAg = LAg_mats, 
+                                              CD4 = CD4_mats, 
+                                              pol = pol_mats, 
+                                              pol2 = pol2_mats,
+                                              prev.neg.time = last_neg_first_pos_diff, 
+                                              t.BED.delay = t_BED_mats,
+                                              t.LAg.delay = t_LAg_mats,
+                                              t.CD4.delay = t_CD4_mats,
+                                              t.pol.delay = t_pol_mats,
+                                              t.pol2.delay = t_pol2_mats,
+                                              mub = rep(list(MBM_pars$mub), nInds), 
+                                              Sigmab = rep(list(MBM_pars$Sigmab), nInds), 
+                                              sigmae = rep(list(MBM_pars$sigmae), nInds),
+                                              n.adapt = n.adapt, n.burn = n.burn, n.iter = n.iter,
+                                              prior.type = prior.type,
+                                              inf.mean = 2, inf.sd = 1.5, 
+                                              max.seroconvert.delay = 2/12,
+                                              u1.pdf = list(user.prior.pdf),
+                                              seed = seeds,
+                                              output.raw = FALSE, 
+                                              SIMPLIFY = FALSE)
   
   #apply mbm to each individual
-  infection_age_dists <- parallel::mcmapply(FUN = mbm.predict,
-                                            BED = BED_mats, 
-                                            LAg = LAg_mats, 
-                                            CD4 = CD4_mats, 
-                                            pol = pol_mats, 
-                                            pol2 = pol2_mats,
-                                            prev.neg.time = last_neg_first_pos_diff, 
-                                            t.BED.delay = t_BED_mats,
-                                            t.LAg.delay = t_LAg_mats,
-                                            t.CD4.delay = t_CD4_mats,
-                                            t.pol.delay = t_pol_mats,
-                                            t.pol2.delay = t_pol2_mats,
-                                            mub = rep(list(MBM_pars$mub), nInds), 
-                                            Sigmab = rep(list(MBM_pars$Sigmab), nInds), 
-                                            sigmae = rep(list(MBM_pars$sigmae), nInds),
-                                            n.adapt = n.adapt, n.burn = n.burn, n.iter = n.iter,
-                                            prior.type = prior.type,
-                                            inf.mean = 2, inf.sd = 1.5, 
-                                            max.seroconvert.delay = 2/12,
-                                            u1.pdf = list(user.prior.pdf),
-                                            seed = seeds,
-                                            output.raw = FALSE, 
-                                            SIMPLIFY = FALSE, 
-                                            mc.cores = parallel::detectCores())
+  #infection_age_dists <- parallel::mcmapply(FUN = mbm.predict,
+  #                                          BED = BED_mats, 
+  #                                          LAg = LAg_mats, 
+  #                                          CD4 = CD4_mats, 
+  #                                          pol = pol_mats, 
+  #                                          pol2 = pol2_mats,
+  #                                          prev.neg.time = last_neg_first_pos_diff, 
+  #                                          t.BED.delay = t_BED_mats,
+  #                                          t.LAg.delay = t_LAg_mats,
+  #                                          t.CD4.delay = t_CD4_mats,
+  #                                          t.pol.delay = t_pol_mats,
+  #                                          t.pol2.delay = t_pol2_mats,
+  #                                          mub = rep(list(MBM_pars$mub), nInds), 
+  #                                          Sigmab = rep(list(MBM_pars$Sigmab), nInds), 
+  #                                          sigmae = rep(list(MBM_pars$sigmae), nInds),
+  #                                          n.adapt = n.adapt, n.burn = n.burn, n.iter = n.iter,
+  #                                          prior.type = prior.type,
+  #                                          inf.mean = 2, inf.sd = 1.5, 
+  #                                          max.seroconvert.delay = 2/12,
+  #                                          u1.pdf = list(user.prior.pdf),
+  #                                          seed = seeds,
+  #                                          output.raw = FALSE, 
+  #                                          SIMPLIFY = FALSE, 
+  #                                          mc.cores = parallel::detectCores())
   
   #extract numeric kernel density estimates from output (time before diagnosis)
   infection_age_dists_diag <- lapply(infection_age_dists, FUN = function(x) x$pdf.num$t_pred)
