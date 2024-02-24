@@ -167,8 +167,8 @@ df <- prepare.HIV.data(patient_ID = patient_ID,
                        prior.type = 1,
                        user.prior.pdf = list(x = c(0, 10), y = c(1/10, 1/10)),
                        n.adapt = 1e4, 
-                       n.burn = 1e4, 
-                       n.iter = 1e4,
+                       n.burn = 1e5, 
+                       n.iter = 1e6,
                        seed = sample(2^31-1, 1))
 ```
 
