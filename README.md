@@ -22,3 +22,9 @@ Workflow:
 
 
 * it is possible to simulate data with 'sim_phybreak' or 'rtrans.tree' and 'sim.coal.phybreak'
+
+Please run the following R commands to install the dependancy infectionAgeHIV
+
+install.packages("devtools")
+library("devtools")
+install_github("MolEvolEpid/infectionAgeHIV")
