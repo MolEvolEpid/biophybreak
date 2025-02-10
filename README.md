@@ -25,6 +25,6 @@ Workflow:
 
 Please run the following R commands to install the dependancy infectionAgeHIV
 
-install.packages("devtools")
-library("devtools")
-install_github("MolEvolEpid/infectionAgeHIV")
+install.packages("devtools")  
+library("devtools")  
+install_github("MolEvolEpid/infectionAgeHIV")  
