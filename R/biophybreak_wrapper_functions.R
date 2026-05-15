@@ -590,7 +590,10 @@ run.mbm <- function(df, n.adapt = 1000, n.burn = 1000, n.iter = 1000,
   infection_age_dists_diag <- lapply(infection_age_dists, FUN = function(x) x$pdf.num$t_pred)
   #extract numeric kernel density estimates from output (time before first sequence)
   infection_age_dists_seq <- lapply(infection_age_dists, FUN = function(x) x$pdf.num.seq$t_pred)
-  
+
+  #kill cluster
+  stopCluster(cl)
+                                  
   #return distributions from infection times and from sampling times
   return(list(infection_age_dists_diag = infection_age_dists_diag, 
               infection_age_dists_seq = infection_age_dists_seq))
