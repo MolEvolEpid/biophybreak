@@ -18,7 +18,8 @@ LazyData: TRUE
 Depends:
     R(>= 3.5.0),
     phangorn,
-    ape
+    ape,
+	infectionAgeHIV
 Imports:
     Rcpp (>= 0.12.1),
     methods,
@@ -39,6 +40,8 @@ Suggests:
     testthat,
     knitr,
     rmarkdown
+Remotes:
+    MolEvolEpid/infectionAgeHIV
 LinkingTo: Rcpp
 RoxygenNote: 7.2.3
 VignetteBuilder: knitr
